@@ -4,6 +4,7 @@ const express = require('express');
 const http = require('http');
 const https = require('https');
 const Anthropic = require('@anthropic-ai/sdk');
+const { Langfuse } = require('langfuse');
 const path = require('path');
 
 const app = express();
@@ -11,6 +12,16 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '..', 'website')));
 
 const client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const langfuse = (process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY)
+  ? new Langfuse({
+      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+      secretKey: process.env.LANGFUSE_SECRET_KEY,
+      baseUrl: process.env.LANGFUSE_HOST || 'http://78.47.43.63:3000'
+    })
+  : null;
+if (langfuse) console.log(`[langfuse] enabled host=${process.env.LANGFUSE_HOST || 'http://78.47.43.63:3000'}`);
+else console.log('[langfuse] disabled (set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY to enable)');
 
 function clickhouseQuery(sql, database) {
   return new Promise((resolve, reject) => {
@@ -181,11 +192,29 @@ app.post('/api/chat', async (req, res) => {
     if (typeof res.flush === 'function') res.flush();
   };
 
+  const trace = langfuse ? langfuse.trace({
+    name: 'chat',
+    input: message,
+    metadata: {
+      scenario: scenario?.title,
+      sector: scenario?.sectorLabel,
+      dbName
+    }
+  }) : null;
+
+  const model = 'claude-sonnet-4-6';
+
   const streamClaude = async (messages) => {
     for (let attempt = 0; attempt < 4; attempt++) {
+      const generation = trace ? trace.generation({
+        name: 'anthropic.messages.stream',
+        model,
+        modelParameters: { max_tokens: 12000, thinking_budget_tokens: 3000 },
+        input: { system: systemPrompt, messages, tools }
+      }) : null;
       try {
         const stream = client.messages.stream({
-          model: 'claude-sonnet-4-6',
+          model,
           max_tokens: 12000,
           thinking: { type: 'enabled', budget_tokens: 3000 },
           system: systemPrompt,
@@ -203,8 +232,23 @@ app.post('/api/chat', async (req, res) => {
           }
         }
 
-        return await stream.finalMessage();
+        const finalMsg = await stream.finalMessage();
+        if (generation) {
+          generation.end({
+            output: finalMsg.content,
+            usage: finalMsg.usage ? {
+              input: finalMsg.usage.input_tokens,
+              output: finalMsg.usage.output_tokens,
+              total: (finalMsg.usage.input_tokens || 0) + (finalMsg.usage.output_tokens || 0)
+            } : undefined,
+            metadata: { stop_reason: finalMsg.stop_reason, attempt }
+          });
+        }
+        return finalMsg;
       } catch (err) {
+        if (generation) {
+          generation.end({ level: 'ERROR', statusMessage: err.message, metadata: { attempt } });
+        }
         if (err.status === 529 && attempt < 3) {
           await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
           continue;
@@ -217,9 +261,15 @@ app.post('/api/chat', async (req, res) => {
   try {
     const messages = [{ role: 'user', content: message }];
     let queryIndex = 0;
+    let lastAssistantText = '';
 
     for (let i = 0; i < 6; i++) {
       const finalMsg = await streamClaude(messages);
+
+      lastAssistantText = finalMsg.content
+        .filter(b => b.type === 'text')
+        .map(b => b.text)
+        .join('\n');
 
       if (finalMsg.stop_reason !== 'tool_use') break;
 
@@ -229,6 +279,10 @@ app.post('/api/chat', async (req, res) => {
 
       const toolResults = await Promise.all(toolUses.map(async toolUse => {
         const idx = queryIndex++;
+        const span = trace ? trace.span({
+          name: 'query_clickhouse',
+          input: { sql: toolUse.input.sql, dbName }
+        }) : null;
         send({ type: 'query_start', sql: toolUse.input.sql, index: idx });
         let content;
         try {
@@ -237,9 +291,11 @@ app.post('/api/chat', async (req, res) => {
           if (content.length > 8000) content = content.substring(0, 8000) + '\n…(truncated)';
           const rowCount = content === '(empty result set)' ? 0 : Math.max(0, content.split('\n').filter(Boolean).length - 1);
           send({ type: 'query_done', index: idx, rowCount });
+          if (span) span.end({ output: { rowCount, preview: content.substring(0, 500) } });
         } catch (err) {
           content = `Query error: ${err.message}`;
           send({ type: 'query_done', index: idx, error: err.message });
+          if (span) span.end({ level: 'ERROR', statusMessage: err.message });
         }
         return { type: 'tool_result', tool_use_id: toolUse.id, content };
       }));
@@ -247,10 +303,18 @@ app.post('/api/chat', async (req, res) => {
       messages.push({ role: 'user', content: toolResults });
     }
 
+    if (trace) {
+      trace.update({ output: lastAssistantText });
+      await langfuse.flushAsync();
+    }
     send({ type: 'done' });
     res.end();
   } catch (err) {
     console.error('Anthropic error:', err.message);
+    if (trace) {
+      trace.update({ output: err.message, metadata: { error: true } });
+      await langfuse.flushAsync().catch(() => {});
+    }
     send({ type: 'error', message: err.message });
     res.end();
   }

@@ -8,6 +8,9 @@ services:
       - CLICKHOUSE_URL=${CLICKHOUSE_URL}
       - CLICKHOUSE_USER=${CLICKHOUSE_USER}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-http://78.47.43.63:3000}
       - PORT=3000
     extra_hosts:
       - "host.docker.internal:host-gateway"
