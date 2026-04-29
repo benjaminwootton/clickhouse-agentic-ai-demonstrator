@@ -9,4 +9,5 @@ services:
       - CLICKHOUSE_USER=${CLICKHOUSE_USER}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
       - PORT=3000
+    tty: true
     restart: unless-stopped

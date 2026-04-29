@@ -4170,28 +4170,33 @@ async function deployScenarioFromModal() {
   status.textContent = 'Running…';
 
   try {
+    console.log('[deploy] POST /api/deploy', { dbName, scenarioId: currentScenario.id });
     const res = await fetch('/api/deploy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ script: buildSampleDataScript(currentScenario), dbName })
     });
     const data = await res.json();
+    console.log('[deploy] response', res.status, data);
 
     if (data.success) {
       deployedScenarios[currentScenario.id] = dbName;
       localStorage.setItem('deployedScenarios', JSON.stringify(deployedScenarios));
       status.className = 'deploy-status success';
       status.textContent = `✓ Deployed (${data.executed} statements)${data.errors?.length ? ` · ${data.errors.length} warning(s)` : ''}`;
+      if (data.errors?.length) console.warn('[deploy] warnings', data.errors);
       setTimeout(() => {
         closeDeployModal();
         renderScenarioDetail(currentScenario);
       }, 250);
     } else {
+      console.error('[deploy] failed', data.errors);
       status.className = 'deploy-status error';
       status.textContent = '✗ ' + (data.errors?.[0]?.error || 'Deploy failed');
       btn.disabled = false;
     }
   } catch (err) {
+    console.error('[deploy] exception', err);
     status.className = 'deploy-status error';
     status.textContent = '✗ ' + err.message;
     btn.disabled = false;

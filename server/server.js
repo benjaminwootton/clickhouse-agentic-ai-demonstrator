@@ -90,15 +90,24 @@ app.post('/api/deploy', async (req, res) => {
   const errors = [];
   let executed = 0;
 
-  for (const stmt of statements) {
+  console.log(`[deploy] dbName=${dbName} statements=${statements.length} scriptBytes=${script.length}`);
+
+  for (let i = 0; i < statements.length; i++) {
+    const stmt = statements[i];
     const isDbLevel = /^(DROP|CREATE)\s+DATABASE/i.test(stmt);
+    const preview = stmt.replace(/\s+/g, ' ').substring(0, 120);
+    console.log(`[deploy] (${i + 1}/${statements.length}) ${isDbLevel ? '[db] ' : ''}${preview}${stmt.length > 120 ? '…' : ''}`);
     try {
       await clickhouseQuery(stmt + ';', isDbLevel ? null : dbName);
       executed++;
     } catch (err) {
-      errors.push({ statement: stmt.substring(0, 100) + '…', error: err.message });
+      console.error(`[deploy] FAILED (${i + 1}/${statements.length}): ${err.message}`);
+      console.error(`[deploy] full statement:\n${stmt}`);
+      errors.push({ statement: stmt.substring(0, 200) + (stmt.length > 200 ? '…' : ''), error: err.message });
     }
   }
+
+  console.log(`[deploy] done dbName=${dbName} executed=${executed} errors=${errors.length}`);
 
   if (executed === 0 && errors.length > 0) {
     return res.status(500).json({ success: false, errors });
