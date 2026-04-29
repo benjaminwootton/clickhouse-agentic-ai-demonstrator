@@ -1,6 +1,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const express = require('express');
+const http = require('http');
 const https = require('https');
 const Anthropic = require('@anthropic-ai/sdk');
 const path = require('path');
@@ -14,6 +15,8 @@ const client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
 function clickhouseQuery(sql, database) {
   return new Promise((resolve, reject) => {
     const base = new URL(process.env.CLICKHOUSE_URL || 'https://localhost:8443');
+    const isHttps = base.protocol === 'https:';
+    const transport = isHttps ? https : http;
     const params = new URLSearchParams();
     if (database) params.set('database', database);
     params.set('default_format', 'TabSeparatedWithNames');
@@ -25,7 +28,7 @@ function clickhouseQuery(sql, database) {
 
     const options = {
       hostname: base.hostname,
-      port: parseInt(base.port) || 8443,
+      port: parseInt(base.port) || (isHttps ? 8443 : 8123),
       path: '/?' + params.toString(),
       method: 'POST',
       headers: {
@@ -35,16 +38,22 @@ function clickhouseQuery(sql, database) {
       }
     };
 
-    const req = https.request(options, res => {
+    const req = transport.request(options, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        if (res.statusCode >= 400) reject(new Error(data.trim()));
-        else resolve(data.trim());
+        if (res.statusCode >= 400) {
+          const msg = data.trim() || `HTTP ${res.statusCode} ${res.statusMessage || ''}`.trim();
+          reject(new Error(msg));
+        } else {
+          resolve(data.trim());
+        }
       });
     });
 
-    req.on('error', reject);
+    req.on('error', err => {
+      reject(new Error(err.message || err.code || String(err)));
+    });
     req.write(body);
     req.end();
   });
