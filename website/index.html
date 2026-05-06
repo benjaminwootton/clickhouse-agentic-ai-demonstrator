@@ -44,7 +44,7 @@ nav{background:#0d1220;border-bottom:1px solid #1e2d47;padding:0 2rem;display:fl
 .card:hover{border-color:#2563eb;transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .card:hover::before{opacity:1}
 .card-sector{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.6rem}
-.cm{color:#f59e0b}.rb{color:#10b981}.cb{color:#06b6d4}.pay{color:#f43f5e}.comp{color:#f97316}.wm{color:#22c55e}.am{color:#8b5cf6}.ins{color:#ef4444}
+.cm{color:#f59e0b}.rb{color:#10b981}.cb{color:#06b6d4}.pay{color:#f43f5e}.comp{color:#f97316}.wm{color:#22c55e}.am{color:#8b5cf6}.ins{color:#ef4444}.tax{color:#84cc16}.pe{color:#ec4899}.acc{color:#14b8a6}.cry{color:#eab308}.cf{color:#0ea5e9}
 .card h3{font-size:1.05rem;font-weight:600;margin-bottom:.6rem;color:#e2e8f0}
 .card p{font-size:.85rem;color:#64748b;line-height:1.65}
 .card-arrow{position:absolute;top:1.2rem;right:1.2rem;color:#334155;font-size:1rem;transition:all .2s}
@@ -252,6 +252,11 @@ footer{border-top:1px solid #1e2d47;padding:2.5rem 2rem 1.2rem;text-align:center
     <div class="tab" onclick="filterSector('wm',this)">Wealth Management</div>
     <div class="tab" onclick="filterSector('am',this)">Asset Management</div>
     <div class="tab" onclick="filterSector('ins',this)">Insurance</div>
+    <div class="tab" onclick="filterSector('tax',this)">Tax</div>
+    <div class="tab" onclick="filterSector('pe',this)">Private Equity</div>
+    <div class="tab" onclick="filterSector('acc',this)">Accounting</div>
+    <div class="tab" onclick="filterSector('cry',this)">Crypto</div>
+    <div class="tab" onclick="filterSector('cf',this)">Corporate Finance</div>
   </div>
 
   <div class="grid-wrap" id="grid-container"></div>
@@ -366,7 +371,25 @@ INSERT INTO surveillance_alerts VALUES
       {q:'Show open alerts that have no assigned analyst or follow-up activity',
        a:'Query surveillance_alerts for status = \'OPEN\' and join to case-management fields where available, or filter for null ownership markers. This gives compliance teams an operational queue of unworked issues.'},
       {q:'Analyse cross-venue trading patterns for the same instrument and trader',
-       a:'Join trades by trader_id and instrument_id, then group activity across venues within short time windows. The agent can explore whether behaviour is fragmented across venues in a way that resembles layering or wash-trade coordination.'}
+       a:'Join trades by trader_id and instrument_id, then group activity across venues within short time windows. The agent can explore whether behaviour is fragmented across venues in a way that resembles layering or wash-trade coordination.'},
+      {q:'Detect potential wash trades between accounts that consistently trade against each other',
+       a:'Self-join the trades table on instrument_id and narrow time windows where buy and sell sides involve related trader_ids or accounts. The agent can quantify offsetting volumes and identify counterparty pairs whose net economic position barely changes — a classic wash-trade signature worth escalating.'},
+      {q:'Investigate possible insider trading around upcoming corporate events',
+       a:'Join trades against a calendar of earnings, M&A announcements, or regulatory filings, and look for unusual position-building in the days before the event by traders or accounts that don\'t normally trade that name. The agent can rank suspicion by abnormal volume z-score and prior history.'},
+      {q:'What if we tightened the spoofing threshold from 80% to 70% cancel rate — how many extra alerts would we generate and how many extra investigators would we need?',
+       a:'Re-score historical orders at the proposed threshold, count incremental alerts by severity, and estimate analyst hours from typical case-handling time. The agent can present the operational cost of tighter calibration alongside the additional risk caught, helping compliance leaders make an informed trade-off.'},
+      {q:'Simulate the impact of a new layering rule that triggers on stacked orders within 500ms',
+       a:'Replay recent orders against the proposed rule logic and project alert volume, false-positive rate, and overlap with existing rules. The agent can show whether the rule adds genuinely new coverage or simply duplicates spoofing detections already in place.'},
+      {q:'Which trading desks would be most affected by introducing pre-trade order velocity limits?',
+       a:'Aggregate historical orders by desk and compute peak orders-per-second, then evaluate how often each desk would have breached candidate limits. The agent can help calibrate thresholds that catch abusive bursts without throttling legitimate market-making activity.'},
+      {q:'Design a watchlist scoring model based on past alert history, severity, and unresolved cases',
+       a:'Combine alert counts, weighted severity, time-since-last-alert, and watchlist tenure into a composite score per trader. The agent can rank traders for proactive review and propose thresholds for automatic watchlist promotion or de-escalation.'},
+      {q:'Trade-through analysis: which executions printed at prices worse than the best displayed quote?',
+       a:'Join executions to market_quotes within sub-second windows and flag fills where exec_price is outside the prevailing NBBO. The agent can quantify trade-through frequency by venue, broker, and instrument, and explain whether routing logic, latency, or venue choice is responsible.'},
+      {q:'What if we re-routed all aggressive orders away from the worst-performing venue for the past quarter?',
+       a:'Recompute hypothetical execution outcomes assuming alternative routing using historical quotes at the second-best venue. The agent can estimate basis-point savings and any incremental fill-rate or impact cost trade-offs, supporting a routing-policy change.'},
+      {q:'Build a narrative case file for trader TDR005 covering the last 30 days of suspicious activity',
+       a:'Pull alerts, orders, trades, and watchlist context for that trader, sequence them into a chronological story, and summarise the patterns and instruments involved. The agent produces a ready-to-review compliance brief rather than just raw query output.'}
     ]
   },
   {
@@ -2980,6 +3003,2129 @@ INSERT INTO broker_claims VALUES
       {q:'Investigate whether one region depends too heavily on a small broker panel',
        a:'Aggregate broker_submissions and broker_policies by region and broker_id to show where distribution concentration risk is building.'}
     ]
+  },
+  // ─── TAX ───────────────────────────────────────────────────────────────────
+  {
+    id:'transfer-pricing',
+    sector:'tax',
+    sectorLabel:'Tax',
+    title:'Transfer Pricing Agent',
+    description:'Analyse intercompany transactions, margins, and benchmarks to evaluate transfer pricing policy compliance. ClickHouse stores high-volume cross-border transactions so AI agents can investigate margins, identify outliers, and prepare evidence for documentation and audit defence.',
+    schema:`-- Transfer Pricing Schema
+CREATE TABLE intercompany_transactions (
+    txn_id           UInt64,
+    seller_entity    String,
+    buyer_entity     String,
+    seller_country   String,
+    buyer_country    String,
+    product_category String,
+    transaction_type Enum8('GOODS'=1,'SERVICES'=2,'IP_LICENSE'=3,'FINANCING'=4),
+    amount_usd       Float64,
+    margin_pct       Float64,
+    txn_date         Date
+) ENGINE = MergeTree()
+ORDER BY (txn_date, seller_entity);
+
+CREATE TABLE benchmark_studies (
+    study_id         String,
+    product_category String,
+    transaction_type Enum8('GOODS'=1,'SERVICES'=2,'IP_LICENSE'=3,'FINANCING'=4),
+    arm_length_low   Float64,
+    arm_length_high  Float64,
+    median_margin    Float64,
+    study_year       UInt16
+) ENGINE = MergeTree()
+ORDER BY (study_year, product_category);
+
+CREATE TABLE entity_master (
+    entity_code      String,
+    legal_name       String,
+    country          String,
+    tax_rate         Float64,
+    functions        String,
+    risks            String
+) ENGINE = ReplacingMergeTree()
+ORDER BY entity_code;`,
+    sampleData:`INSERT INTO intercompany_transactions VALUES
+(1, 'IRL_CO', 'US_CO', 'IE', 'US', 'Software', 3, 12500000, 0.34, '2024-03-12'),
+(2, 'NLD_CO', 'DE_CO', 'NL', 'DE', 'Distribution', 1, 4800000, 0.04, '2024-03-15'),
+(3, 'SGP_CO', 'IN_CO', 'SG', 'IN', 'Services', 2, 980000, 0.18, '2024-03-18'),
+(4, 'IRL_CO', 'JP_CO', 'IE', 'JP', 'Software', 3, 6200000, 0.41, '2024-03-22');
+
+INSERT INTO benchmark_studies VALUES
+('BM-2024-SOFT', 'Software', 3, 0.22, 0.32, 0.28, 2024),
+('BM-2024-DIST', 'Distribution', 1, 0.02, 0.06, 0.04, 2024),
+('BM-2024-SVCS', 'Services', 2, 0.08, 0.15, 0.12, 2024);
+
+INSERT INTO entity_master VALUES
+('IRL_CO', 'GlobalTech Ireland', 'IE', 0.125, 'IP holder', 'IP development risk'),
+('US_CO',  'GlobalTech US',      'US', 0.21,  'Sales',     'Market risk'),
+('NLD_CO', 'GlobalTech NL',      'NL', 0.258, 'Distributor','Inventory risk'),
+('DE_CO',  'GlobalTech Germany', 'DE', 0.30,  'Sales',     'Market risk');`,
+    qanda:[
+      {q:'Which intercompany transactions fall outside the arm\'s length range?',
+       a:'Join intercompany_transactions to benchmark_studies on product_category and transaction_type, then flag rows where margin_pct sits outside arm_length_low–arm_length_high. The agent ranks exceptions by amount_usd to focus on material outliers.'},
+      {q:'Show our largest royalty flows by jurisdiction pair',
+       a:'Filter for transaction_type = IP_LICENSE and group by seller_country, buyer_country and sum amount_usd. The agent surfaces the corridors that drive cross-border tax exposure and where documentation is most critical.'},
+      {q:'What if the OECD raised the minimum margin for distribution entities from 4% to 5%?',
+       a:'Re-run benchmark comparisons with margin floor 5% and quantify additional taxable income that would have to be reallocated. The agent estimates the incremental tax cost and which entities absorb it.'},
+      {q:'Simulate the impact of moving our IP from Ireland to Singapore on group effective tax rate',
+       a:'Reapportion future royalty flows to a Singapore IP holder using SG tax rates from entity_master, then compare projected group ETR. The agent shows the gross saving and any controlled-foreign-company exposure created downstream.'},
+      {q:'Are there any patterns suggesting profits are systematically routed to low-tax entities?',
+       a:'Aggregate margin_pct by buyer_country/seller_country and join entity tax rates. The agent looks for negative correlation between margins booked and statutory rates — a red flag for tax authorities.'},
+      {q:'Strategy: which entities would benefit most from an Advance Pricing Agreement?',
+       a:'Rank entities by transaction volume, margin volatility, and number of arm-length exceptions. The agent recommends APA candidates by exposure and pricing uncertainty rather than just size.'},
+      {q:'Investigate margin trends for software licensing across the last four quarters',
+       a:'Bucket intercompany_transactions by quarter and compute average margins by product_category. The agent explores whether margins are drifting against benchmark and explains potential pricing-policy drift.'},
+      {q:'What if we restructured our European distribution model to a limited-risk distributor?',
+       a:'Model the margin reduction from 4% to ~2% across NLD/DE flows and compute the resulting profit shift to the principal entity. The agent presents the ETR impact and BEPS-related risk considerations.'},
+      {q:'Identify intercompany services with no benchmarking evidence',
+       a:'Left-join intercompany_transactions to benchmark_studies and surface rows where no matching benchmark exists. These are documentation gaps that may need fresh studies before next audit cycle.'},
+      {q:'Build a country-by-country reporting summary from the underlying transaction data',
+       a:'Aggregate revenue, profit, and tax by jurisdiction from intercompany_transactions and entity_master. The agent assembles a CbCR-style table with explanations of which flows drive each row.'}
+    ]
+  },
+  {
+    id:'tax-provision',
+    sector:'tax',
+    sectorLabel:'Tax',
+    title:'Tax Provision & ETR Agent',
+    description:'Analyse current and deferred tax positions across legal entities and jurisdictions to model the group effective tax rate. ClickHouse holds the granular trial balance and adjustment data needed for AI agents to investigate ETR drivers, reconcile provisions, and explore what-if planning scenarios.',
+    schema:`-- Tax Provision Schema
+CREATE TABLE entity_pretax_income (
+    entity_code     String,
+    period          Date,
+    pretax_income   Float64,
+    statutory_rate  Float64,
+    jurisdiction    String
+) ENGINE = MergeTree()
+ORDER BY (period, entity_code);
+
+CREATE TABLE permanent_differences (
+    diff_id         UInt64,
+    entity_code     String,
+    period          Date,
+    description     String,
+    amount          Float64,
+    direction       Enum8('ADD'=1,'DEDUCT'=2)
+) ENGINE = MergeTree()
+ORDER BY (period, entity_code);
+
+CREATE TABLE deferred_tax_items (
+    item_id         UInt64,
+    entity_code     String,
+    period          Date,
+    category        String,
+    timing_diff     Float64,
+    dta_dtl         Enum8('DTA'=1,'DTL'=2),
+    valuation_pct   Float64
+) ENGINE = MergeTree()
+ORDER BY (period, entity_code);
+
+CREATE TABLE tax_credits (
+    credit_id       UInt64,
+    entity_code     String,
+    period          Date,
+    credit_type     String,
+    amount          Float64,
+    expiry_year     UInt16
+) ENGINE = MergeTree()
+ORDER BY (period, entity_code);`,
+    sampleData:`INSERT INTO entity_pretax_income VALUES
+('US_CO',  '2024-Q1', 42000000, 0.21,  'US'),
+('UK_CO',  '2024-Q1', 18500000, 0.25,  'UK'),
+('IRL_CO', '2024-Q1', 31000000, 0.125, 'IE'),
+('DE_CO',  '2024-Q1', 12300000, 0.30,  'DE');
+
+INSERT INTO permanent_differences VALUES
+(1, 'US_CO', '2024-Q1', 'Non-deductible meals', 320000, 1),
+(2, 'US_CO', '2024-Q1', 'Tax-exempt interest', 480000, 2),
+(3, 'UK_CO', '2024-Q1', 'R&D super-deduction', 2100000, 2);
+
+INSERT INTO deferred_tax_items VALUES
+(1, 'US_CO', '2024-Q1', 'Depreciation timing', 4200000, 2, 1.0),
+(2, 'UK_CO', '2024-Q1', 'NOL carryforward',  6800000, 1, 0.7),
+(3, 'DE_CO', '2024-Q1', 'Bad debt reserve',   950000, 1, 1.0);
+
+INSERT INTO tax_credits VALUES
+(1, 'US_CO', '2024-Q1', 'R&D credit', 1500000, 2034),
+(2, 'IRL_CO','2024-Q1', 'KDB',         800000, 2030);`,
+    qanda:[
+      {q:'What is our consolidated effective tax rate for the quarter?',
+       a:'Sum pretax income, apply statutory rates from entity_pretax_income, layer in permanent differences and credits, and compute total tax / total pretax income. The agent presents the ETR with a bridge from statutory to effective.'},
+      {q:'Show the largest drivers of the gap between statutory and effective tax rate',
+       a:'Decompose ETR into statutory baseline plus permanent_differences, tax_credits, and valuation allowance impacts. The agent ranks contributors by absolute effect on group ETR.'},
+      {q:'What if the UK raises corporation tax to 27% next year?',
+       a:'Re-price UK pretax income at 27% and remeasure UK deferred tax items. The agent shows the increase in current tax and the one-off remeasurement of deferred balances flowing through P&L.'},
+      {q:'Simulate the ETR impact of using all available R&D credits this year',
+       a:'Apply outstanding tax_credits where credit_type = R&D against current liability, capped at expiry. The agent shows the reduction in current tax and any utilisation pacing trade-offs across years.'},
+      {q:'Which entities are most exposed if Pillar Two minimum tax of 15% applies?',
+       a:'Compute jurisdictional ETR using pretax_income and tax provision, then flag any below 15%. The agent estimates the top-up tax that would be due and which entities trigger it.'},
+      {q:'Strategy: should we recognise a valuation allowance on the UK NOL carryforward?',
+       a:'Compare projected UK pretax income against the NOL balance and assess utilisation likelihood. The agent recommends valuation_pct adjustments and shows the P&L impact of writing the DTA up or down.'},
+      {q:'Build a quarter-over-quarter movement schedule for total deferred tax balances',
+       a:'Aggregate deferred_tax_items by entity and period, computing opening, movements, and closing balances. The agent narrates what drove each entity\'s change — origination, reversal, or rate change.'},
+      {q:'What if we accelerated capital expenditure into the current year?',
+       a:'Estimate additional tax depreciation deductions and the corresponding deferred tax liability creation. The agent shows the cash tax saving today versus the future P&L drag.'},
+      {q:'Investigate which permanent differences recur every period',
+       a:'Pivot permanent_differences by description across periods. The agent identifies structural items (R&D super-deduction, non-deductible expenses) that should be built into ETR forecasts.'},
+      {q:'Forecast next year\'s ETR under three economic scenarios',
+       a:'Project pretax_income up/flat/down by entity, hold permanent items roughly stable, and recompute ETR. The agent presents a sensitivity table for finance leadership planning.'}
+    ]
+  },
+  {
+    id:'indirect-tax',
+    sector:'tax',
+    sectorLabel:'Tax',
+    title:'Indirect Tax Compliance Agent',
+    description:'Analyse VAT, GST, and sales tax flows across jurisdictions to validate filings, surface anomalies, and recover missed input tax. ClickHouse stores high-volume invoice and tax data, enabling AI agents to investigate exceptions and explore strategies for improving recovery rates.',
+    schema:`-- Indirect Tax Schema
+CREATE TABLE invoices (
+    invoice_id      UInt64,
+    issuer_entity   String,
+    counterparty    String,
+    country         String,
+    tax_jurisdiction String,
+    net_amount      Float64,
+    tax_amount      Float64,
+    tax_rate        Float64,
+    direction       Enum8('SALES'=1,'PURCHASE'=2),
+    invoice_date    Date,
+    invoice_status  String
+) ENGINE = MergeTree()
+ORDER BY (invoice_date, country);
+
+CREATE TABLE tax_codes (
+    tax_code        String,
+    jurisdiction    String,
+    rate            Float64,
+    description     String,
+    effective_from  Date
+) ENGINE = MergeTree()
+ORDER BY (effective_from, tax_code);
+
+CREATE TABLE filings (
+    filing_id       UInt64,
+    entity_code     String,
+    jurisdiction    String,
+    period          String,
+    output_tax      Float64,
+    input_tax       Float64,
+    net_payable     Float64,
+    filing_status   String,
+    filed_at        DateTime
+) ENGINE = MergeTree()
+ORDER BY (filed_at, jurisdiction);`,
+    sampleData:`INSERT INTO invoices VALUES
+(1, 'UK_CO', 'CUST_A', 'UK', 'UK_VAT_STD', 100000, 20000, 0.20, 1, '2024-03-05', 'POSTED'),
+(2, 'UK_CO', 'SUPP_X', 'UK', 'UK_VAT_STD',  45000,  9000, 0.20, 2, '2024-03-08', 'POSTED'),
+(3, 'DE_CO', 'CUST_B', 'DE', 'DE_VAT_STD', 220000, 41800, 0.19, 1, '2024-03-10', 'POSTED'),
+(4, 'UK_CO', 'CUST_C', 'IE', 'EU_REVERSE',  60000,     0, 0.00, 1, '2024-03-12', 'POSTED'),
+(5, 'UK_CO', 'SUPP_Y', 'UK', 'UK_VAT_STD',  18000,  4500, 0.25, 2, '2024-03-15', 'POSTED');
+
+INSERT INTO tax_codes VALUES
+('UK_VAT_STD', 'UK', 0.20, 'UK Standard VAT', '2011-01-04'),
+('DE_VAT_STD', 'DE', 0.19, 'Germany Standard VAT', '2007-01-01'),
+('EU_REVERSE', 'EU', 0.00, 'EU Reverse Charge', '2010-01-01');
+
+INSERT INTO filings VALUES
+(1, 'UK_CO', 'UK', '2024-03', 20000, 13500, 6500, 'SUBMITTED', '2024-04-07 10:14:00'),
+(2, 'DE_CO', 'DE', '2024-03', 41800, 28200, 13600, 'SUBMITTED', '2024-04-10 14:22:00');`,
+    qanda:[
+      {q:'Which invoices are taxed at rates that don\'t match the applicable tax_code?',
+       a:'Join invoices to tax_codes on jurisdiction and effective_from, then flag rows where invoice tax_rate differs from the published rate. The agent surfaces likely coding errors that distort filings.'},
+      {q:'Show our input tax recovery rate by entity over the last four periods',
+       a:'Aggregate input tax from purchase invoices and divide by total purchase tax incurred. The agent benchmarks recovery across entities and flags where recovery is unexpectedly low.'},
+      {q:'What if we centralised EU procurement through an Irish entity?',
+       a:'Re-route purchase invoices through IRL_CO and recompute jurisdictional input/output tax. The agent estimates VAT cash-flow benefit and any registration obligations triggered.'},
+      {q:'Identify suppliers consistently invoicing without VAT despite being VAT-registered',
+       a:'Filter invoices where direction = PURCHASE, tax_amount = 0 and counterparty country has standard VAT. The agent quantifies missed input recovery and prioritises suppliers for remediation.'},
+      {q:'Simulate the impact of a UK VAT rate change from 20% to 22%',
+       a:'Re-price recent UK invoices at 22% and compute the change to net_payable across recent filings. The agent shows the expected cash impact and pricing/contract implications.'},
+      {q:'Which jurisdictions have we under or over paid in over the last year?',
+       a:'Sum filings.net_payable by jurisdiction and compare against expected liability derived from invoice flows. The agent surfaces variances that may be reclaim or assessment opportunities.'},
+      {q:'Strategy: should we apply for monthly rather than quarterly VAT filing in Germany?',
+       a:'Compare timing of input vs. output tax in DE invoices and estimate the working-capital benefit of monthly refunds. The agent recommends entities where filing-frequency change improves cash.'},
+      {q:'Investigate reverse-charge transactions that may be mis-classified',
+       a:'Filter invoices for tax_jurisdiction = EU_REVERSE and review counterparty/country combinations. The agent identifies rows where reverse charge does not actually apply.'},
+      {q:'What if we sold direct to EU consumers under the OSS regime?',
+       a:'Model B2C flows under OSS rates by destination country and compute consolidated output tax. The agent shows simplification benefits and impact on registrations.'},
+      {q:'Build a reconciliation between invoice-level tax and submitted filings',
+       a:'Sum invoice tax_amount by entity, period, and direction; compare to filings.output_tax/input_tax. The agent flags reconciliation breaks that need investigation before audit.'}
+    ]
+  },
+  {
+    id:'tax-loss-optimisation',
+    sector:'tax',
+    sectorLabel:'Tax',
+    title:'Tax Loss Utilisation Agent',
+    description:'Analyse net operating losses, capital losses, and tax credits across the group to optimise utilisation against expiring balances and projected income. ClickHouse holds historical positions and projections so AI agents can simulate utilisation strategies and quantify trapped value.',
+    schema:`-- Tax Loss Utilisation Schema
+CREATE TABLE loss_balances (
+    balance_id      UInt64,
+    entity_code     String,
+    jurisdiction    String,
+    loss_type       Enum8('NOL'=1,'CAPITAL'=2,'FOREIGN_TAX_CREDIT'=3,'R&D_CREDIT'=4),
+    origin_year     UInt16,
+    expiry_year     UInt16,
+    opening_balance Float64,
+    utilised_ytd    Float64,
+    closing_balance Float64
+) ENGINE = MergeTree()
+ORDER BY (origin_year, entity_code);
+
+CREATE TABLE income_forecasts (
+    entity_code     String,
+    jurisdiction    String,
+    year            UInt16,
+    projected_income Float64,
+    confidence_pct  Float64
+) ENGINE = MergeTree()
+ORDER BY (year, entity_code);
+
+CREATE TABLE planning_strategies (
+    strategy_id     String,
+    description     String,
+    expected_benefit Float64,
+    risk_rating     Enum8('LOW'=1,'MEDIUM'=2,'HIGH'=3),
+    status          String
+) ENGINE = ReplacingMergeTree()
+ORDER BY strategy_id;`,
+    sampleData:`INSERT INTO loss_balances VALUES
+(1, 'UK_CO', 'UK', 1, 2018, 2028, 12000000, 1500000, 10500000),
+(2, 'US_CO', 'US', 4, 2020, 2040,  3500000,  500000,  3000000),
+(3, 'DE_CO', 'DE', 2, 2019, 2026,  4200000,        0,  4200000),
+(4, 'IRL_CO','IE', 1, 2017, 2099,  1800000,  300000,  1500000);
+
+INSERT INTO income_forecasts VALUES
+('UK_CO',  'UK', 2024, 18000000, 0.8),
+('UK_CO',  'UK', 2025, 22000000, 0.7),
+('DE_CO',  'DE', 2024,  6000000, 0.6),
+('DE_CO',  'DE', 2025,  9000000, 0.5);
+
+INSERT INTO planning_strategies VALUES
+('S1', 'Accelerate UK profits via royalty repatriation', 2400000, 2, 'PROPOSED'),
+('S2', 'Group relief from UK_CO to DE_CO',                900000, 1, 'APPROVED');`,
+    qanda:[
+      {q:'Which loss balances are closest to expiry and likely to be lost?',
+       a:'Filter loss_balances where expiry_year is within 3 years and join to income_forecasts to estimate utilisation likelihood. The agent ranks balances at risk of expiring unused.'},
+      {q:'What is the total trapped tax value across the group?',
+       a:'Sum closing_balance × statutory rate where utilisation likelihood is low. The agent computes the present-value impact of tax assets that may never be realised.'},
+      {q:'What if we reorganised to allow group relief between UK_CO and DE_CO?',
+       a:'Model UK losses offsetting German future profits, factoring expiry constraints. The agent estimates the benefit and identifies legal-entity restructuring requirements.'},
+      {q:'Strategy: should we accelerate income into entities with expiring losses?',
+       a:'Map loss_balances against income_forecasts and identify entities where pulling income forward avoids loss expiry. The agent recommends transfer-pricing or timing strategies and quantifies the saving.'},
+      {q:'Show how much of our R&D credits will expire unused at current usage pace',
+       a:'Project utilisation curve for FOREIGN_TAX_CREDIT and R&D_CREDIT against projected_income. The agent computes the gap between accumulated credits and capacity to use them.'},
+      {q:'Simulate the impact of a 50% restriction on NOL utilisation',
+       a:'Cap utilisation at 50% of taxable income each year and recompute multi-year tax position. The agent shows the cash tax acceleration this rule would create.'},
+      {q:'Which entity has the strongest case for an internal restructuring to use losses?',
+       a:'Score entities by loss size, expiry pressure, and projected income gap. The agent ranks restructuring candidates and explains the trade-offs.'},
+      {q:'What if we sold a profitable business unit into the loss-holding entity?',
+       a:'Reallocate projected_income from one entity to another and recompute combined utilisation. The agent quantifies the tax-asset rescue and integration considerations.'},
+      {q:'Investigate whether our valuation allowance on UK NOLs is still appropriate',
+       a:'Compare projected utilisation versus current valuation allowance pct. The agent recommends releasing or strengthening the allowance with supporting evidence.'},
+      {q:'Build a five-year forecast of loss utilisation for the audit committee',
+       a:'Project loss_balances against income_forecasts year by year, surfacing expiries and remaining balances. The agent assembles a forward-looking schedule with key assumptions called out.'}
+    ]
+  },
+  {
+    id:'tax-controversy',
+    sector:'tax',
+    sectorLabel:'Tax',
+    title:'Tax Controversy & Audit Defence Agent',
+    description:'Analyse open tax audits, information requests, and historical settlements to manage controversy risk. ClickHouse holds case management, position taken, and supporting evidence data so AI agents can prepare responses, model exposure, and surface settlement strategy options.',
+    schema:`-- Tax Controversy Schema
+CREATE TABLE audit_cases (
+    case_id         String,
+    entity_code     String,
+    jurisdiction    String,
+    tax_type        String,
+    period_under_audit String,
+    status          Enum8('OPEN'=1,'INFO_REQUEST'=2,'PROPOSED_ASSESSMENT'=3,'SETTLED'=4,'LITIGATION'=5),
+    exposure_low    Float64,
+    exposure_high   Float64,
+    reserve_recorded Float64,
+    opened_date     Date,
+    closed_date     Nullable(Date)
+) ENGINE = MergeTree()
+ORDER BY (opened_date, jurisdiction);
+
+CREATE TABLE positions (
+    position_id     UInt64,
+    case_id         String,
+    description     String,
+    technical_strength Enum8('STRONG'=1,'MODERATE'=2,'WEAK'=3),
+    benefit_claimed Float64,
+    moreLikelyThanNot UInt8
+) ENGINE = MergeTree()
+ORDER BY (case_id, position_id);
+
+CREATE TABLE info_requests (
+    irq_id          UInt64,
+    case_id         String,
+    request_date    Date,
+    due_date        Date,
+    status          String,
+    response_quality Enum8('STRONG'=1,'PARTIAL'=2,'WEAK'=3)
+) ENGINE = MergeTree()
+ORDER BY (request_date, case_id);`,
+    sampleData:`INSERT INTO audit_cases VALUES
+('TC-001', 'US_CO', 'US', 'Federal Income', '2021', 1, 4500000, 9000000, 6000000, '2024-01-15', NULL),
+('TC-002', 'UK_CO', 'UK', 'Transfer Pricing', '2020-2022', 3, 12000000, 24000000, 15000000, '2023-09-10', NULL),
+('TC-003', 'DE_CO', 'DE', 'VAT', '2023-Q3', 4, 800000, 1500000, 0, '2023-12-01', '2024-02-15');
+
+INSERT INTO positions VALUES
+(1, 'TC-001', 'R&D credit eligibility',  1, 4200000, 1),
+(2, 'TC-001', 'Capitalisation timing',   2, 1800000, 1),
+(3, 'TC-002', 'IP royalty rate',         2, 18000000, 1),
+(4, 'TC-002', 'Cost contribution split', 3,  6000000, 0);
+
+INSERT INTO info_requests VALUES
+(1, 'TC-001', '2024-02-01', '2024-03-01', 'RESPONDED', 1),
+(2, 'TC-002', '2024-01-20', '2024-02-20', 'OVERDUE', 2),
+(3, 'TC-002', '2024-03-05', '2024-04-05', 'IN_PROGRESS', 0);`,
+    qanda:[
+      {q:'What is our total tax exposure across open audits?',
+       a:'Sum exposure_low and exposure_high across audit_cases where status != SETTLED. The agent presents the range alongside reserves recorded so leadership can see the gap.'},
+      {q:'Which open positions have the weakest technical support?',
+       a:'Filter positions where technical_strength = WEAK and rank by benefit_claimed. The agent highlights where unfavourable rulings would have the largest impact and where reserves may need strengthening.'},
+      {q:'Show overdue information requests by case',
+       a:'Filter info_requests where status = OVERDUE and join to audit_cases for context. The agent prioritises which cases need urgent attention to avoid escalation.'},
+      {q:'What if we settled the UK transfer pricing audit at the midpoint of exposure?',
+       a:'Model settlement cost at (exposure_low + exposure_high)/2, compare to existing reserve, and quantify P&L impact. The agent presents the case for or against settling versus litigating.'},
+      {q:'Strategy: which cases are most likely to escalate to litigation?',
+       a:'Score cases by status progression, weak positions, and overdue responses. The agent recommends prioritisation and where alternative dispute resolution should be considered.'},
+      {q:'Compare current audit reserves against historical settlement rates',
+       a:'Aggregate closed cases by jurisdiction and compute average settled / proposed ratio. The agent benchmarks current reserves against historical experience and suggests adjustments.'},
+      {q:'Simulate a worst-case scenario where all weak positions are denied',
+       a:'Sum benefit_claimed for positions where technical_strength = WEAK and project additional tax + interest + penalties. The agent presents downside cash exposure for the audit committee.'},
+      {q:'Investigate whether our information request response quality correlates with case outcomes',
+       a:'Compare response_quality on closed cases with settlement-to-exposure ratios. The agent shows whether stronger documentation drives better outcomes and recommends investment areas.'},
+      {q:'What if the IRS expanded the current audit to additional years?',
+       a:'Project exposure scaling using prior-year tax positions and estimate additional reserve requirement. The agent quantifies sensitivity to scope expansion.'},
+      {q:'Build a controversy risk dashboard for the next quarterly committee',
+       a:'Aggregate open cases, exposure ranges, reserves, overdue items, and weak positions into an executive view. The agent narrates the most material movements since the prior quarter.'}
+    ]
+  },
+  // ─── PRIVATE EQUITY ────────────────────────────────────────────────────────
+  {
+    id:'portfolio-company-performance',
+    sector:'pe',
+    sectorLabel:'Private Equity',
+    title:'Portfolio Company Performance Agent',
+    description:'Analyse operating KPIs, financials, and value creation plan progress across the portfolio. ClickHouse stores granular monthly data from each portfolio company, allowing AI agents to compare cohorts, surface underperformers, and explore intervention strategies.',
+    schema:`-- Portfolio Company Performance Schema
+CREATE TABLE portco_financials (
+    portco_id       String,
+    period          Date,
+    revenue         Float64,
+    ebitda          Float64,
+    ebitda_margin   Float64,
+    cash_balance    Float64,
+    net_debt        Float64,
+    headcount       UInt32
+) ENGINE = MergeTree()
+ORDER BY (period, portco_id);
+
+CREATE TABLE portco_kpis (
+    portco_id       String,
+    period          Date,
+    kpi_name        String,
+    actual_value    Float64,
+    plan_value      Float64,
+    unit            String
+) ENGINE = MergeTree()
+ORDER BY (period, portco_id);
+
+CREATE TABLE value_creation_plan (
+    portco_id       String,
+    initiative_id   String,
+    initiative_name String,
+    expected_ebitda_uplift Float64,
+    target_quarter  String,
+    status          Enum8('PLANNED'=1,'IN_PROGRESS'=2,'DELIVERED'=3,'AT_RISK'=4)
+) ENGINE = MergeTree()
+ORDER BY (portco_id, target_quarter);
+
+CREATE TABLE portco_master (
+    portco_id       String,
+    company_name    String,
+    sector          String,
+    fund            String,
+    investment_date Date,
+    entry_ev        Float64,
+    entry_ebitda    Float64
+) ENGINE = ReplacingMergeTree()
+ORDER BY portco_id;`,
+    sampleData:`INSERT INTO portco_financials VALUES
+('PC001', '2024-03-01', 28000000, 5600000, 0.20, 4200000, 18000000, 245),
+('PC001', '2024-02-01', 26500000, 5100000, 0.19, 3900000, 18500000, 240),
+('PC002', '2024-03-01', 14200000, 1900000, 0.13, 1800000, 12000000, 142),
+('PC003', '2024-03-01', 62000000, 14500000, 0.23, 8200000, 38000000, 510);
+
+INSERT INTO portco_kpis VALUES
+('PC001', '2024-03-01', 'NetRevenueRetention', 1.08, 1.10, 'ratio'),
+('PC001', '2024-03-01', 'CAC_Payback_Months', 18, 14, 'months'),
+('PC002', '2024-03-01', 'GrossMargin', 0.42, 0.50, 'ratio'),
+('PC003', '2024-03-01', 'BookingsGrowth', 0.27, 0.20, 'ratio');
+
+INSERT INTO value_creation_plan VALUES
+('PC001', 'I-01', 'Pricing optimisation',     2200000, '2024-Q3', 2),
+('PC001', 'I-02', 'EU expansion',             1500000, '2024-Q4', 1),
+('PC002', 'I-03', 'COGS rationalisation',      900000, '2024-Q2', 4),
+('PC003', 'I-04', 'Bolt-on acquisition',      4800000, '2024-Q3', 2);
+
+INSERT INTO portco_master VALUES
+('PC001', 'BetaSoft Inc', 'Software', 'Fund III', '2022-06-15', 180000000, 22000000),
+('PC002', 'GammaParts Ltd', 'Industrial', 'Fund II', '2020-03-10', 95000000,  16000000),
+('PC003', 'DeltaHealth Co', 'Healthcare', 'Fund III', '2023-01-20', 320000000, 48000000);`,
+    qanda:[
+      {q:'Which portfolio companies are tracking ahead or behind plan on EBITDA?',
+       a:'Compare portco_financials.ebitda against value_creation_plan expected uplifts and entry baseline. The agent ranks portcos by variance to plan and explains the drivers.'},
+      {q:'Show all value creation initiatives that are currently AT_RISK',
+       a:'Filter value_creation_plan where status = AT_RISK and aggregate expected_ebitda_uplift by portco. The agent surfaces the EBITDA at risk and which initiatives most threaten exit valuations.'},
+      {q:'What if we pulled the planned bolt-on acquisition forward by a quarter?',
+       a:'Bring forward expected_ebitda_uplift on initiative I-04 and project EBITDA pacing through to exit. The agent estimates the multiple-arbitrage benefit and integration risk implications.'},
+      {q:'Strategy: which portco needs operating partner intervention most urgently?',
+       a:'Score portcos on KPI variance to plan, AT_RISK initiatives, cash runway, and headcount trends. The agent recommends ranking and what specific levers each portco should pull.'},
+      {q:'Compare like-for-like portfolio performance against entry-year cohorts',
+       a:'Group portco_master by investment_date year and compute current EBITDA growth versus cohort medians. The agent shows whether vintage-year exposure is a risk.'},
+      {q:'Simulate exit valuations under three EBITDA growth scenarios',
+       a:'Project EBITDA at exit under base, bull, bear cases and apply sector multiples. The agent shows IRR and MOIC distribution at portfolio level.'},
+      {q:'Which portcos have the most cash burn relative to their cash balance?',
+       a:'Compute monthly cash burn from portco_financials and divide by current cash_balance. The agent identifies runway risk and recommends financing or cost actions.'},
+      {q:'What if we accelerated headcount growth at PC002 to fix gross margin?',
+       a:'Model payroll cost increase against assumed margin recovery and net effect on EBITDA. The agent presents the cost-benefit trade-off for operating committee approval.'},
+      {q:'Investigate whether KPI underperformance is correlated with sector or fund vintage',
+       a:'Group KPI variance by portco_master.sector and fund. The agent surfaces structural patterns rather than treating each portco as one-off.'},
+      {q:'Build a fund-level performance summary highlighting top three risks',
+       a:'Aggregate portco financials, KPIs, and value creation status by fund. The agent assembles an LP-ready briefing with the most material concerns called out.'}
+    ]
+  },
+  {
+    id:'deal-pipeline',
+    sector:'pe',
+    sectorLabel:'Private Equity',
+    title:'Deal Pipeline & Pursuit Agent',
+    description:'Analyse the deal pipeline across origination sources, sectors, and stages to evaluate where the fund is winning and losing. ClickHouse holds historical pursuit data so AI agents can compare conversion, surface relationship intelligence, and recommend allocation of pursuit capital.',
+    schema:`-- Deal Pipeline Schema
+CREATE TABLE pipeline_deals (
+    deal_id         String,
+    deal_name       String,
+    sector          String,
+    geography       String,
+    deal_size       Float64,
+    stage           Enum8('SOURCED'=1,'IOI'=2,'LOI'=3,'DD'=4,'IC'=5,'WON'=6,'LOST'=7,'PASSED'=8),
+    source_channel  String,
+    sourced_date    Date,
+    last_action_date Date,
+    deal_team_lead  String
+) ENGINE = MergeTree()
+ORDER BY (sourced_date, sector);
+
+CREATE TABLE pursuit_costs (
+    deal_id         String,
+    cost_type       String,
+    amount          Float64,
+    cost_date       Date
+) ENGINE = MergeTree()
+ORDER BY (cost_date, deal_id);
+
+CREATE TABLE relationship_history (
+    contact_id      String,
+    deal_id         String,
+    interaction_type String,
+    interaction_date Date,
+    sentiment       Enum8('POSITIVE'=1,'NEUTRAL'=2,'NEGATIVE'=3)
+) ENGINE = MergeTree()
+ORDER BY (interaction_date, deal_id);`,
+    sampleData:`INSERT INTO pipeline_deals VALUES
+('D-1001', 'Project Atlas', 'Healthcare', 'EU',     420000000, 4, 'Banker',  '2024-01-15', '2024-03-10', 'A.Smith'),
+('D-1002', 'Project Bravo', 'Software',   'NA',     180000000, 2, 'Direct',  '2024-02-01', '2024-03-05', 'B.Jones'),
+('D-1003', 'Project Cobra', 'Industrial', 'EU',     310000000, 7, 'Banker',  '2023-11-10', '2024-02-15', 'A.Smith'),
+('D-1004', 'Project Delta', 'Software',   'NA',     560000000, 5, 'Direct',  '2024-01-22', '2024-03-12', 'C.Patel');
+
+INSERT INTO pursuit_costs VALUES
+('D-1001', 'Legal',     280000, '2024-02-15'),
+('D-1001', 'CommercialDD',420000, '2024-02-28'),
+('D-1003', 'Legal',     180000, '2024-01-10'),
+('D-1004', 'CommercialDD',650000, '2024-03-01');
+
+INSERT INTO relationship_history VALUES
+('CT-01', 'D-1001', 'CEO meeting',    '2024-02-20', 1),
+('CT-02', 'D-1003', 'Banker call',    '2024-02-01', 2),
+('CT-03', 'D-1004', 'Management pres','2024-02-25', 1);`,
+    qanda:[
+      {q:'What is our win rate by source channel over the last 24 months?',
+       a:'Aggregate pipeline_deals where stage in (WON, LOST) by source_channel and compute win ratio. The agent shows whether banker-led, proprietary, or relationship-sourced deals convert best.'},
+      {q:'Show pipeline value by stage and sector',
+       a:'Sum deal_size grouped by stage and sector across active pipeline. The agent surfaces where capital is concentrated and where the fund is overweight or underweight.'},
+      {q:'Which deals have stalled in due diligence longer than 90 days?',
+       a:'Filter deals at stage = DD where last_action_date is older than 90 days. The agent identifies stalled opportunities likely to lose momentum and recommends next-step actions.'},
+      {q:'What if we doubled effort on healthcare deals — what return on pursuit cost would we need?',
+       a:'Project healthcare win rate × deal size against incremental pursuit_costs. The agent estimates the marginal return on pursuit capital and the threshold for profitability.'},
+      {q:'Strategy: which sectors should we exit pursuing based on historical win rates?',
+       a:'Compute win rate, average pursuit cost, and average deal size by sector. The agent recommends sector allocation changes based on capital efficiency.'},
+      {q:'Compare our pursuit cost as a percentage of deal size against industry benchmarks',
+       a:'Sum pursuit_costs by deal_id and divide by deal_size. The agent benchmarks cost intensity and flags deals where DD spend was disproportionate.'},
+      {q:'Simulate the impact of declining the next two competitive auctions',
+       a:'Identify upcoming auctions in the pipeline and project saved pursuit cost vs. lost expected value. The agent shows when discipline pays off versus opportunity cost.'},
+      {q:'Investigate whether deal team leads have differential win rates',
+       a:'Group pipeline_deals by deal_team_lead and compute win rates and average IRR achieved. The agent surfaces strong performers and where coaching may be needed.'},
+      {q:'Which relationships drove the most positive sentiment around won deals?',
+       a:'Join relationship_history to won deals and rank by sentiment. The agent identifies the contacts and bankers most associated with success — useful for relationship investment.'},
+      {q:'What if we redirected proprietary sourcing budget toward founder-led software targets?',
+       a:'Model expected win rate and deal-size mix shift, then project value created vs. cost reallocated. The agent presents a sourcing-strategy pivot for IC discussion.'}
+    ]
+  },
+  {
+    id:'fund-performance',
+    sector:'pe',
+    sectorLabel:'Private Equity',
+    title:'Fund Performance & IRR Attribution Agent',
+    description:'Analyse fund-level returns across vintages, sectors, and value-creation drivers. ClickHouse holds cash flow and NAV data per investment, allowing AI agents to attribute IRR and MOIC, compare funds, and explore what-if portfolio construction scenarios.',
+    schema:`-- Fund Performance Schema
+CREATE TABLE fund_cashflows (
+    fund_id         String,
+    portco_id       String,
+    flow_type       Enum8('CALL'=1,'DISTRIBUTION'=2,'NAV'=3,'FEES'=4),
+    amount          Float64,
+    flow_date       Date
+) ENGINE = MergeTree()
+ORDER BY (flow_date, fund_id);
+
+CREATE TABLE investment_outcomes (
+    portco_id       String,
+    fund_id         String,
+    invested_capital Float64,
+    realised_proceeds Float64,
+    unrealised_value Float64,
+    moic            Float64,
+    irr_pct         Float64,
+    holding_period_years Float64,
+    exit_status     Enum8('EXITED'=1,'PARTIAL'=2,'HELD'=3,'WRITTEN_DOWN'=4)
+) ENGINE = MergeTree()
+ORDER BY (fund_id, portco_id);
+
+CREATE TABLE value_drivers (
+    portco_id       String,
+    revenue_growth_contrib Float64,
+    margin_expansion_contrib Float64,
+    multiple_arbitrage_contrib Float64,
+    debt_paydown_contrib Float64,
+    fx_contrib       Float64
+) ENGINE = MergeTree()
+ORDER BY portco_id;`,
+    sampleData:`INSERT INTO fund_cashflows VALUES
+('Fund III', 'PC001', 1, 180000000, '2022-06-15'),
+('Fund III', 'PC001', 3, 245000000, '2024-03-31'),
+('Fund III', 'PC003', 1, 320000000, '2023-01-20'),
+('Fund II',  'PC002', 1,  95000000, '2020-03-10'),
+('Fund II',  'PC002', 2, 140000000, '2024-02-15');
+
+INSERT INTO investment_outcomes VALUES
+('PC001', 'Fund III', 180000000,         0, 245000000, 1.36, 0.18, 1.8, 3),
+('PC002', 'Fund II',   95000000, 140000000,         0, 1.47, 0.11, 4.0, 1),
+('PC003', 'Fund III', 320000000,         0, 360000000, 1.13, 0.10, 1.2, 3);
+
+INSERT INTO value_drivers VALUES
+('PC001', 0.45, 0.20, 0.25,  0.10,  0.00),
+('PC002', 0.20, 0.30, 0.15,  0.30,  0.05),
+('PC003', 0.55, 0.10, 0.20,  0.15,  0.00);`,
+    qanda:[
+      {q:'Decompose Fund III IRR by value driver',
+       a:'Aggregate value_drivers across Fund III investments to show contribution of revenue growth, margin expansion, multiple arbitrage, debt paydown, and FX. The agent narrates the dominant return source.'},
+      {q:'Compare Fund II and Fund III performance at the same point in fund life',
+       a:'Calculate cumulative DPI, RVPI, and net IRR at year-3 mark for both funds. The agent shows whether Fund III is pacing ahead or behind on a like-for-like basis.'},
+      {q:'Which investments are dragging fund performance most?',
+       a:'Rank investment_outcomes by absolute contribution to fund IRR. The agent identifies the bottom contributors and explains whether they are recoverable or write-down candidates.'},
+      {q:'What if we exited PC003 a year earlier at the current valuation?',
+       a:'Recalculate IRR using current unrealised_value at an earlier date. The agent shows the IRR uplift from quicker exit but the foregone hold-period upside.'},
+      {q:'Strategy: should the fund pursue continuation vehicles for top performers?',
+       a:'Identify investment_outcomes with strong MOIC trajectory and remaining runway. The agent recommends candidates and quantifies expected DPI vs. extension upside.'},
+      {q:'Show how much of Fund II returns came from multiple arbitrage versus fundamentals',
+       a:'Sum multiple_arbitrage_contrib vs. revenue_growth_contrib + margin_expansion_contrib. The agent explains whether returns are durable or market-driven.'},
+      {q:'Simulate fund returns under a 2x multiple compression at exit',
+       a:'Reduce exit multiple assumption by 50% across HELD investments and recompute IRR/MOIC. The agent shows fund-level sensitivity to exit-environment risk.'},
+      {q:'Investigate vintage-year correlation between holding period and IRR',
+       a:'Plot holding_period_years against irr_pct across investments. The agent shows whether holding longer is helping or hurting and recommends pacing strategy.'},
+      {q:'Build an LP-ready waterfall view of distributions across vintages',
+       a:'Aggregate fund_cashflows with flow_type = DISTRIBUTION by fund, layered with NAV. The agent constructs a transparent attribution narrative for the next investor day.'},
+      {q:'What if we re-cut fund returns excluding the top 2 outliers?',
+       a:'Recompute fund IRR removing top-quartile performers and present persistence-of-returns analysis. The agent shows whether performance is concentrated or broad-based.'}
+    ]
+  },
+  {
+    id:'value-creation',
+    sector:'pe',
+    sectorLabel:'Private Equity',
+    title:'Value Creation Tracking Agent',
+    description:'Analyse operational improvement initiatives across portcos to measure delivery against the original investment thesis. ClickHouse holds initiative-level financial impact, milestones, and benchmarks so AI agents can investigate slippage, identify replicable plays, and recommend portfolio-wide programmes.',
+    schema:`-- Value Creation Schema
+CREATE TABLE initiatives (
+    initiative_id   String,
+    portco_id       String,
+    workstream      Enum8('PRICING'=1,'COST'=2,'COMMERCIAL'=3,'M&A'=4,'DIGITAL'=5,'TALENT'=6),
+    description     String,
+    target_ebitda   Float64,
+    realised_ebitda Float64,
+    start_date      Date,
+    target_date     Date,
+    actual_completion Nullable(Date),
+    status          Enum8('PLANNED'=1,'IN_PROGRESS'=2,'DELIVERED'=3,'AT_RISK'=4,'CANCELLED'=5)
+) ENGINE = MergeTree()
+ORDER BY (start_date, portco_id);
+
+CREATE TABLE milestones (
+    milestone_id    UInt64,
+    initiative_id   String,
+    description     String,
+    due_date        Date,
+    completed_date  Nullable(Date),
+    rag             Enum8('GREEN'=1,'AMBER'=2,'RED'=3)
+) ENGINE = MergeTree()
+ORDER BY (due_date, initiative_id);
+
+CREATE TABLE benchmarks (
+    workstream      Enum8('PRICING'=1,'COST'=2,'COMMERCIAL'=3,'M&A'=4,'DIGITAL'=5,'TALENT'=6),
+    sector          String,
+    median_uplift_pct Float64,
+    top_quartile_pct Float64
+) ENGINE = MergeTree()
+ORDER BY (workstream, sector);`,
+    sampleData:`INSERT INTO initiatives VALUES
+('I-01', 'PC001', 1, 'B2B pricing optimisation',  2200000, 1500000, '2023-09-01', '2024-06-30', NULL, 2),
+('I-02', 'PC001', 2, 'Cloud migration savings',   1300000, 1300000, '2023-04-01', '2024-01-31', '2024-01-25', 3),
+('I-03', 'PC002', 2, 'COGS reduction programme',   900000,        0, '2023-07-01', '2024-03-31', NULL, 4),
+('I-04', 'PC003', 4, 'Bolt-on acquisition',       4800000, 1800000, '2023-12-01', '2024-09-30', NULL, 2);
+
+INSERT INTO milestones VALUES
+(1, 'I-01', 'Pricing analytics build',     '2023-12-15', '2023-12-10', 1),
+(2, 'I-01', 'List price uplift launch',    '2024-03-01', '2024-03-05', 2),
+(3, 'I-03', 'Supplier consolidation',      '2024-01-31', NULL,         3),
+(4, 'I-04', 'Target identification',       '2024-02-15', '2024-02-10', 1);
+
+INSERT INTO benchmarks VALUES
+(1, 'Software',   0.06, 0.10),
+(2, 'Industrial', 0.08, 0.12),
+(3, 'Healthcare', 0.05, 0.09),
+(4, 'Software',   0.10, 0.18);`,
+    qanda:[
+      {q:'What percentage of expected EBITDA uplift has been realised across the portfolio?',
+       a:'Sum realised_ebitda divided by target_ebitda across initiatives. The agent reports portfolio-wide delivery rate and breaks it down by workstream.'},
+      {q:'Which workstreams deliver most reliably versus benchmarks?',
+       a:'Compare realised uplift % against benchmarks median by workstream and sector. The agent identifies which playbooks consistently pay off and which underdeliver.'},
+      {q:'Show all initiatives more than 60 days behind schedule',
+       a:'Filter where target_date is past and status != DELIVERED, computing days slipped. The agent surfaces which initiatives need recovery plans urgently.'},
+      {q:'What if we cancelled all RED milestones and reallocated effort?',
+       a:'Quantify EBITDA at risk on RED milestones and explore reallocation to AMBER initiatives showing momentum. The agent presents the trade-off for operating committee.'},
+      {q:'Strategy: which playbooks should we replicate across the portfolio?',
+       a:'Find initiatives that beat top_quartile benchmarks and propose extending them to similar portcos. The agent recommends a portfolio-wide programme with expected uplift.'},
+      {q:'Investigate why pricing initiatives in software outperform industrial',
+       a:'Compare realised vs. target uplift by workstream and sector with operating context. The agent explores structural reasons and what industrial playbooks might learn.'},
+      {q:'Simulate the impact of pulling forward all delayed initiatives by one quarter',
+       a:'Move target_date forward and recompute EBITDA contribution to current period. The agent quantifies the urgency benefit if execution can be accelerated.'},
+      {q:'Which portcos depend most heavily on a single initiative for their value creation thesis?',
+       a:'Compute concentration of target_ebitda in a single initiative per portco. The agent flags concentration risk where exit thesis hinges on one bet.'},
+      {q:'What if a key M&A bolt-on falls through — what is the EBITDA gap?',
+       a:'Remove I-04 from delivery and recompute portfolio uplift. The agent shows the resulting hole and recommends backup initiatives.'},
+      {q:'Build a quarterly value creation review pack for the IC',
+       a:'Aggregate initiative status, EBITDA delivered, RAG ratings, and benchmark comparison. The agent assembles a structured narrative ready for the investment committee.'}
+    ]
+  },
+  {
+    id:'lp-reporting',
+    sector:'pe',
+    sectorLabel:'Private Equity',
+    title:'LP Reporting & Capital Calls Agent',
+    description:'Analyse limited partner positions, capital call pacing, distributions, and reporting requests across funds. ClickHouse stores LP-level granular data so AI agents can prepare investor reports, model future calls, and respond rapidly to LP queries.',
+    schema:`-- LP Reporting Schema
+CREATE TABLE lp_commitments (
+    lp_id           String,
+    lp_name         String,
+    fund_id         String,
+    commitment      Float64,
+    drawn           Float64,
+    distributed     Float64,
+    nav             Float64,
+    commitment_date Date
+) ENGINE = MergeTree()
+ORDER BY (commitment_date, fund_id);
+
+CREATE TABLE capital_calls (
+    call_id         String,
+    fund_id         String,
+    call_date       Date,
+    purpose         String,
+    total_called    Float64,
+    days_notice     UInt8
+) ENGINE = MergeTree()
+ORDER BY (call_date, fund_id);
+
+CREATE TABLE distributions_history (
+    distribution_id String,
+    fund_id         String,
+    lp_id           String,
+    amount          Float64,
+    distribution_date Date,
+    type            Enum8('CASH'=1,'STOCK'=2,'RECYCLED'=3)
+) ENGINE = MergeTree()
+ORDER BY (distribution_date, fund_id);
+
+CREATE TABLE lp_queries (
+    query_id        UInt64,
+    lp_id           String,
+    received_date   Date,
+    topic           String,
+    status          String,
+    response_days   Nullable(UInt16)
+) ENGINE = MergeTree()
+ORDER BY (received_date, lp_id);`,
+    sampleData:`INSERT INTO lp_commitments VALUES
+('LP-001', 'CalPERS',          'Fund III', 150000000, 90000000,  35000000, 142000000, '2022-03-15'),
+('LP-002', 'Ontario Teachers', 'Fund III', 100000000, 60000000,  22000000,  95000000, '2022-04-10'),
+('LP-003', 'GIC',              'Fund III',  75000000, 45000000,  18000000,  72000000, '2022-04-25'),
+('LP-001', 'CalPERS',          'Fund II',  100000000, 100000000, 145000000,  18000000, '2018-09-01');
+
+INSERT INTO capital_calls VALUES
+('CC-1', 'Fund III', '2024-02-15', 'Acquisition - Project Alpha', 80000000, 10),
+('CC-2', 'Fund III', '2024-03-20', 'Follow-on capital - PC001',   25000000, 10);
+
+INSERT INTO distributions_history VALUES
+('DS-1', 'Fund II',  'LP-001', 45000000, '2024-02-15', 1),
+('DS-2', 'Fund III', 'LP-001', 12000000, '2024-03-31', 1),
+('DS-3', 'Fund II',  'LP-001', 12000000, '2024-03-15', 2);
+
+INSERT INTO lp_queries VALUES
+(1, 'LP-001', '2024-02-20', 'PC003 covenant breach', 'CLOSED', 4),
+(2, 'LP-002', '2024-03-05', 'ESG reporting',         'OPEN',   NULL),
+(3, 'LP-003', '2024-03-12', 'Recycling policy',      'OPEN',   NULL);`,
+    qanda:[
+      {q:'Show each LP\'s position with commitment, drawn, distributed, NAV and DPI/RVPI',
+       a:'Pivot lp_commitments by lp_id and fund, computing DPI = distributed/drawn and RVPI = nav/drawn. The agent presents a clean LP statement view.'},
+      {q:'What is the dry powder remaining in Fund III across LPs?',
+       a:'Sum (commitment - drawn) by fund_id. The agent shows total uncalled capital and how it is distributed across LPs.'},
+      {q:'Forecast capital calls for the next four quarters based on pipeline',
+       a:'Project forward calls from pipeline_deals at LOI/IC stage and pace against historical capital_calls cadence. The agent estimates LP cash needs and call timing.'},
+      {q:'What if we accelerated the Project Alpha closing — what additional capital call is required?',
+       a:'Bring CC-1 forward and recompute LP cash requirement. The agent shows individual LP impact and required notice periods.'},
+      {q:'Strategy: should we recycle distributions or return capital this quarter?',
+       a:'Compare recycling cap utilisation against pipeline funding needs. The agent recommends policy and quantifies LP DPI impact for each option.'},
+      {q:'Which LPs have outstanding queries beyond the response SLA?',
+       a:'Filter lp_queries where status = OPEN and received_date is older than the SLA threshold. The agent prioritises LP responses by relationship importance.'},
+      {q:'Investigate which topics LPs raise most often',
+       a:'Group lp_queries by topic and count over time. The agent identifies recurring concerns to address proactively in the next investor letter.'},
+      {q:'Simulate IRR sensitivity for an LP that joined Fund III at later closing',
+       a:'Apply equalisation interest and recalculate net IRR for late-joiner LP. The agent shows the difference versus first-close LPs.'},
+      {q:'Build a capital account statement for LP-001 for the most recent quarter',
+       a:'Aggregate calls, distributions, fees, and NAV change for that LP. The agent assembles a polished statement matching the standard quarterly format.'},
+      {q:'What if a major LP defaults on the next call?',
+       a:'Model the impact of LP-001 not funding CC-1 and the resulting dilution or remarketing requirements. The agent quantifies legal-side options and remaining LPs\' top-up needs.'}
+    ]
+  },
+  // ─── ACCOUNTING ────────────────────────────────────────────────────────────
+  {
+    id:'close-acceleration',
+    sector:'acc',
+    sectorLabel:'Accounting',
+    title:'Close Acceleration Agent',
+    description:'Analyse month-end close activities, journal entry patterns, and bottlenecks across legal entities to accelerate financial close. ClickHouse stores granular close-task data so AI agents can identify slow paths, recurring exceptions, and automation opportunities.',
+    schema:`-- Close Acceleration Schema
+CREATE TABLE close_tasks (
+    task_id         UInt64,
+    entity_code     String,
+    period          String,
+    task_name       String,
+    task_owner      String,
+    planned_day     Int8,
+    actual_day      Int8,
+    status          Enum8('NOT_STARTED'=1,'IN_PROGRESS'=2,'COMPLETED'=3,'BLOCKED'=4),
+    duration_hours  Float32
+) ENGINE = MergeTree()
+ORDER BY (period, entity_code);
+
+CREATE TABLE journal_entries (
+    je_id           UInt64,
+    entity_code     String,
+    period          String,
+    je_type         Enum8('AUTO'=1,'MANUAL'=2,'TOPSIDE'=3,'ADJUSTMENT'=4),
+    amount          Float64,
+    posted_at       DateTime,
+    posted_by       String
+) ENGINE = MergeTree()
+ORDER BY (posted_at, entity_code);
+
+CREATE TABLE close_dependencies (
+    task_id         UInt64,
+    depends_on_task UInt64,
+    blocking_minutes Float32
+) ENGINE = MergeTree()
+ORDER BY (task_id, depends_on_task);`,
+    sampleData:`INSERT INTO close_tasks VALUES
+(1, 'US_CO', '2024-03', 'Bank reconciliation', 'A.Smith', 1, 1, 3, 4.5),
+(2, 'US_CO', '2024-03', 'AR cutoff',           'B.Jones', 2, 3, 3, 8.0),
+(3, 'US_CO', '2024-03', 'Intercompany match',  'C.Patel', 3, 5, 3, 14.0),
+(4, 'US_CO', '2024-03', 'FX revaluation',      'A.Smith', 4, 6, 4, 12.0),
+(5, 'UK_CO', '2024-03', 'Lease entries',       'D.Brown', 4, 4, 3, 6.0);
+
+INSERT INTO journal_entries VALUES
+(1, 'US_CO', '2024-03', 1, 1240000, '2024-04-01 09:14:00', 'system'),
+(2, 'US_CO', '2024-03', 2, 480000,  '2024-04-03 16:42:00', 'B.Jones'),
+(3, 'US_CO', '2024-03', 3, 2100000, '2024-04-06 21:55:00', 'CFO'),
+(4, 'UK_CO', '2024-03', 4, 320000,  '2024-04-04 11:22:00', 'D.Brown');
+
+INSERT INTO close_dependencies VALUES
+(2, 1, 60),
+(3, 2, 120),
+(4, 3, 240);`,
+    qanda:[
+      {q:'Which close tasks consistently slip past their planned day?',
+       a:'Compare actual_day vs planned_day across periods grouping by task_name. The agent identifies systemic slippage patterns rather than one-off incidents.'},
+      {q:'Show the critical path for the most recent close',
+       a:'Walk close_dependencies and surface the longest path of blocking tasks. The agent presents the bottleneck chain that determines overall close speed.'},
+      {q:'How many topside entries did we post and what was their total impact?',
+       a:'Filter journal_entries where je_type = TOPSIDE and aggregate by amount and posted_by. The agent flags late adjustments that may indicate quality issues or aggressive timing.'},
+      {q:'What if we automated the AR cutoff process?',
+       a:'Estimate hours saved on task 2 across all entities and the impact on dependent tasks. The agent quantifies the close-day acceleration achievable.'},
+      {q:'Strategy: which manual journal categories should we automate first?',
+       a:'Group manual JEs by category and rank by frequency × hours saved. The agent recommends an automation backlog by ROI.'},
+      {q:'Investigate journal entries posted after midnight by the CFO',
+       a:'Filter journal_entries where posted_at hour > 22 and posted_by has CFO role. The agent surfaces last-minute adjustments needing audit attention.'},
+      {q:'Simulate moving FX revaluation a day earlier in the close calendar',
+       a:'Reorder dependencies and recompute critical path. The agent shows whether shifting that task forward unblocks downstream consolidation.'},
+      {q:'Which entities run the slowest close and why?',
+       a:'Aggregate close_tasks by entity_code computing average actual_day. The agent diagnoses whether complexity, headcount, or process is the driver.'},
+      {q:'What if we centralised intercompany matching across all entities?',
+       a:'Project consolidated effort vs. current decentralised model. The agent estimates time and FTE savings versus governance trade-offs.'},
+      {q:'Build a close performance dashboard for the CFO',
+       a:'Aggregate close-day metrics, topside JE counts, and bottleneck list across the last six closes. The agent produces a leadership-ready scorecard.'}
+    ]
+  },
+  {
+    id:'revenue-recognition',
+    sector:'acc',
+    sectorLabel:'Accounting',
+    title:'Revenue Recognition (ASC 606) Agent',
+    description:'Analyse contract terms, performance obligations, and revenue schedules to validate ASC 606/IFRS 15 application. ClickHouse holds contract-line and recognition data so AI agents can investigate revenue accuracy, model changes in policy, and surface restatement risk.',
+    schema:`-- Revenue Recognition Schema
+CREATE TABLE contracts (
+    contract_id     String,
+    customer_id     String,
+    signed_date     Date,
+    contract_value  Float64,
+    term_months     UInt16,
+    contract_type   String
+) ENGINE = MergeTree()
+ORDER BY (signed_date, contract_id);
+
+CREATE TABLE performance_obligations (
+    po_id           UInt64,
+    contract_id     String,
+    description     String,
+    standalone_price Float64,
+    allocated_revenue Float64,
+    recognition_method Enum8('POINT_IN_TIME'=1,'OVER_TIME'=2,'USAGE'=3),
+    start_date      Date,
+    end_date        Date
+) ENGINE = MergeTree()
+ORDER BY (start_date, contract_id);
+
+CREATE TABLE revenue_schedule (
+    schedule_id     UInt64,
+    po_id           UInt64,
+    period          Date,
+    recognised_amount Float64
+) ENGINE = MergeTree()
+ORDER BY (period, po_id);
+
+CREATE TABLE contract_modifications (
+    mod_id          UInt64,
+    contract_id     String,
+    mod_date        Date,
+    type            Enum8('UPSIZE'=1,'DOWNSIZE'=2,'EXTENSION'=3,'TERMINATION'=4),
+    impact_amount   Float64
+) ENGINE = MergeTree()
+ORDER BY (mod_date, contract_id);`,
+    sampleData:`INSERT INTO contracts VALUES
+('CTR-001', 'CUST-A', '2024-01-15', 1200000, 36, 'SaaS+PS'),
+('CTR-002', 'CUST-B', '2024-02-01',  480000, 24, 'SaaS'),
+('CTR-003', 'CUST-C', '2023-09-10',  900000, 12, 'License+Support');
+
+INSERT INTO performance_obligations VALUES
+(1, 'CTR-001', 'SaaS subscription',     900000, 850000, 2, '2024-02-01', '2027-01-31'),
+(2, 'CTR-001', 'Implementation services',300000, 350000, 2, '2024-01-20', '2024-04-30'),
+(3, 'CTR-002', 'SaaS subscription',     480000, 480000, 2, '2024-02-15', '2026-02-14'),
+(4, 'CTR-003', 'Perpetual license',     700000, 700000, 1, '2023-10-01', '2023-10-01'),
+(5, 'CTR-003', 'Annual support',        200000, 200000, 2, '2023-10-01', '2024-09-30');
+
+INSERT INTO revenue_schedule VALUES
+(1, 1, '2024-03-01', 23611.11),
+(2, 2, '2024-03-01', 116666.67),
+(3, 3, '2024-03-01', 20000.00),
+(4, 5, '2024-03-01', 16666.67);
+
+INSERT INTO contract_modifications VALUES
+(1, 'CTR-001', '2024-03-01', 1, 240000),
+(2, 'CTR-002', '2024-03-15', 2, -120000);`,
+    qanda:[
+      {q:'Which contracts have allocated revenue diverging materially from standalone prices?',
+       a:'Compute the variance between allocated_revenue and standalone_price by performance obligation. The agent flags allocations that may need review under ASC 606.'},
+      {q:'Show revenue to be recognised over the next four quarters',
+       a:'Project revenue_schedule forward by performance obligation start/end dates. The agent presents forward revenue visibility for FP&A planning.'},
+      {q:'What if we changed implementation services to ratable recognition?',
+       a:'Replay performance_obligations.recognition_method = OVER_TIME for services and recompute schedule. The agent quantifies revenue smoothing and current-period impact.'},
+      {q:'Investigate contract modifications that may require cumulative catch-up',
+       a:'Filter modifications where impact_amount changes scope materially and join to performance_obligations. The agent identifies cases needing modification accounting analysis.'},
+      {q:'Strategy: should we change pricing to reduce revenue allocation complexity?',
+       a:'Identify contracts with complex allocations and model simpler pricing. The agent shows revenue smoothing benefit versus commercial flexibility loss.'},
+      {q:'How much revenue is at risk if customer-A churns mid-contract?',
+       a:'Sum future scheduled revenue for CTR-001 if terminated, factoring termination clauses. The agent presents the recognition reversal and ARR impact.'},
+      {q:'Which contracts have suspicious back-end loaded recognition?',
+       a:'Identify revenue_schedule with > 30% concentrated in last quarter. The agent flags potential aggressive timing for review.'},
+      {q:'Simulate the impact of moving to point-in-time recognition for licenses',
+       a:'Recompute revenue under POINT_IN_TIME for CTR-003-style perpetual licenses. The agent shows P&L acceleration and policy implications.'},
+      {q:'What if a key auditor judgement on stand-ready obligations changed?',
+       a:'Reapply the alternative judgment across affected contracts and quantify revenue restatement. The agent helps assess audit risk.'},
+      {q:'Build a SOX-relevant revenue review pack for the audit committee',
+       a:'Aggregate contract values, modifications, allocations, and judgment areas. The agent produces a structured narrative ready for audit committee review.'}
+    ]
+  },
+  {
+    id:'intercompany-recon',
+    sector:'acc',
+    sectorLabel:'Accounting',
+    title:'Intercompany Reconciliation Agent',
+    description:'Analyse intercompany balances and transactions across legal entities to reconcile mismatches and accelerate elimination. ClickHouse holds high-volume intercompany ledger data so AI agents can investigate breaks, identify systemic causes, and recommend process fixes.',
+    schema:`-- Intercompany Reconciliation Schema
+CREATE TABLE ic_balances (
+    entity_pair_id  String,
+    entity_a        String,
+    entity_b        String,
+    balance_a_view  Float64,
+    balance_b_view  Float64,
+    currency        String,
+    period          Date
+) ENGINE = MergeTree()
+ORDER BY (period, entity_pair_id);
+
+CREATE TABLE ic_transactions (
+    txn_id          UInt64,
+    from_entity     String,
+    to_entity       String,
+    amount          Float64,
+    currency        String,
+    txn_date        Date,
+    description     String,
+    cleared         UInt8
+) ENGINE = MergeTree()
+ORDER BY (txn_date, from_entity);
+
+CREATE TABLE ic_breaks (
+    break_id        UInt64,
+    entity_pair_id  String,
+    period          Date,
+    break_amount    Float64,
+    age_days        UInt16,
+    category        String,
+    status          Enum8('OPEN'=1,'INVESTIGATING'=2,'RESOLVED'=3,'WRITE_OFF'=4)
+) ENGINE = MergeTree()
+ORDER BY (period, entity_pair_id);`,
+    sampleData:`INSERT INTO ic_balances VALUES
+('US-UK', 'US_CO', 'UK_CO', 4250000, 4180000, 'USD', '2024-03-31'),
+('US-DE', 'US_CO', 'DE_CO', 2800000, 2800000, 'USD', '2024-03-31'),
+('UK-IRL','UK_CO', 'IRL_CO', 1900000, 1750000, 'GBP', '2024-03-31');
+
+INSERT INTO ic_transactions VALUES
+(1, 'US_CO', 'UK_CO', 250000, 'USD', '2024-03-28', 'Royalty - March', 1),
+(2, 'US_CO', 'UK_CO',  70000, 'USD', '2024-03-31', 'Service charge',   0),
+(3, 'UK_CO', 'IRL_CO',150000, 'GBP', '2024-03-30', 'IP fee',           0);
+
+INSERT INTO ic_breaks VALUES
+(1, 'US-UK',  '2024-03-31',  70000,  3, 'Timing - in transit', 2),
+(2, 'UK-IRL', '2024-03-31', 150000,  4, 'FX rate mismatch',    1);`,
+    qanda:[
+      {q:'Show all intercompany pairs with balance differences greater than $50k',
+       a:'Compute abs(balance_a_view - balance_b_view) and filter > 50000. The agent surfaces material reconciliation breaks for resolution priority.'},
+      {q:'Which break categories occur most frequently?',
+       a:'Group ic_breaks by category and count. The agent identifies systemic causes — timing, FX, posting errors — to drive process fixes.'},
+      {q:'How old are the open breaks on average?',
+       a:'Compute average age_days where status in (OPEN, INVESTIGATING). The agent benchmarks aging and flags chronic items.'},
+      {q:'What if we required all intercompany transactions to settle by month-end day -3?',
+       a:'Apply a hypothetical cutoff and reclassify in-transit transactions. The agent estimates the reduction in timing breaks.'},
+      {q:'Strategy: should we move to a single intercompany clearing entity?',
+       a:'Model reduction in pair count and break volume under a hub-and-spoke model. The agent quantifies the simplification benefit and migration cost.'},
+      {q:'Investigate breaks driven by FX rate mismatches',
+       a:'Filter ic_breaks where category = FX rate mismatch and join to currency. The agent surfaces whether central rate-setting would eliminate them.'},
+      {q:'Simulate the impact of automating intercompany matching at the transaction level',
+       a:'Estimate matched volume and remaining manual queue. The agent shows the FTE savings and accuracy improvement.'},
+      {q:'Which entity pair has the most chronic reconciliation issues?',
+       a:'Rank entity_pair_id by total break amount and frequency over the last twelve months. The agent recommends targeted intervention.'},
+      {q:'What if we wrote off all breaks below $5k aged > 90 days?',
+       a:'Quantify total write-off and remaining reconciliation queue. The agent presents the trade-off between materiality and process discipline.'},
+      {q:'Build an audit-ready intercompany reconciliation summary by entity',
+       a:'Pivot ic_balances and ic_breaks by entity pair. The agent prepares the deliverable expected by external auditors.'}
+    ]
+  },
+  {
+    id:'audit-anomaly',
+    sector:'acc',
+    sectorLabel:'Accounting',
+    title:'Audit Anomaly Detection Agent',
+    description:'Analyse general ledger activity to identify journal entries with characteristics that warrant audit attention — round numbers, late posting, unusual approvers, or off-pattern combinations. ClickHouse holds full-year GL detail so AI agents can investigate anomalies and explain patterns.',
+    schema:`-- Audit Anomaly Schema
+CREATE TABLE gl_entries (
+    je_id           UInt64,
+    line_id         UInt32,
+    account         String,
+    entity_code     String,
+    debit           Float64,
+    credit          Float64,
+    posted_at       DateTime,
+    posted_by       String,
+    period          String,
+    reversed_flag   UInt8
+) ENGINE = MergeTree()
+ORDER BY (posted_at, account);
+
+CREATE TABLE user_master (
+    user_id         String,
+    role            String,
+    department      String,
+    seniority       Enum8('JUNIOR'=1,'MID'=2,'SENIOR'=3,'EXEC'=4),
+    is_authorised   UInt8
+) ENGINE = ReplacingMergeTree()
+ORDER BY user_id;
+
+CREATE TABLE anomaly_rules (
+    rule_id         String,
+    description     String,
+    threshold       Float64,
+    severity        Enum8('LOW'=1,'MEDIUM'=2,'HIGH'=3)
+) ENGINE = MergeTree()
+ORDER BY rule_id;`,
+    sampleData:`INSERT INTO gl_entries VALUES
+(1, 1, '4000-Revenue', 'US_CO',        0, 5000000, '2024-03-31 23:48:00', 'CFO',     '2024-03', 0),
+(2, 1, '6100-Expense', 'US_CO',  900000,        0, '2024-03-30 14:12:00', 'A.Smith', '2024-03', 0),
+(3, 1, '2200-Accrual', 'UK_CO', 1000000,        0, '2024-04-01 03:14:00', 'B.Jones', '2024-03', 0),
+(4, 1, '1100-Cash',    'US_CO',  150000,        0, '2024-03-29 10:00:00', 'A.Smith', '2024-03', 0),
+(5, 1, '4000-Revenue', 'US_CO',        0,  150000, '2024-04-15 11:22:00', 'A.Smith', '2024-03', 1);
+
+INSERT INTO user_master VALUES
+('CFO',     'CFO',           'Finance', 4, 1),
+('A.Smith', 'Senior Accountant','Finance', 3, 1),
+('B.Jones', 'Accountant',    'Finance', 2, 1);
+
+INSERT INTO anomaly_rules VALUES
+('R-001', 'Round million entries posted after hours', 1000000, 3),
+('R-002', 'Manual entries reversed within 30 days',         0, 2),
+('R-003', 'Entries posted by unauthorised users',           0, 3);`,
+    qanda:[
+      {q:'Show journal entries posted outside normal business hours',
+       a:'Filter gl_entries where hour(posted_at) < 7 or > 19. The agent surfaces late and weekend postings worth scrutinising.'},
+      {q:'Which approvers post unusually large or round entries?',
+       a:'Group gl_entries by posted_by, computing count of round-million entries. The agent identifies users whose patterns deviate from peers.'},
+      {q:'How many entries posted in March were reversed in April?',
+       a:'Join entries by je_id where reversed_flag = 1 and original posted in earlier period. The agent quantifies potential aggressive accruals.'},
+      {q:'What if we tightened the round-number threshold from $1M to $500k?',
+       a:'Recount anomalies under tighter threshold and project incremental review workload. The agent shows the trade-off between sensitivity and noise.'},
+      {q:'Strategy: which controls should we automate to reduce audit findings?',
+       a:'Map anomaly_rules to historical findings and prioritise by severity × frequency. The agent recommends a control automation roadmap.'},
+      {q:'Investigate entries posted by users without authorisation',
+       a:'Join gl_entries to user_master where is_authorised = 0. The agent surfaces SoD violations needing immediate remediation.'},
+      {q:'Simulate the impact of requiring two-person approval on entries > $250k',
+       a:'Recount entries that would require dual approval and estimate process latency. The agent shows control improvement vs. close-speed trade-off.'},
+      {q:'Which accounts attract the most period-end adjustments?',
+       a:'Group entries posted in last 3 days of period by account. The agent surfaces accounts with concentrated cutoff activity.'},
+      {q:'What if we benchmarked our anomaly volume against peer companies?',
+       a:'Compute anomaly rates per $M of revenue and compare against industry benchmarks. The agent contextualises whether finding volume is high or low.'},
+      {q:'Build an audit selection list of the highest-risk entries for the quarter',
+       a:'Rank entries by combined rule scores from anomaly_rules. The agent produces a prioritised review queue for internal audit.'}
+    ]
+  },
+  {
+    id:'lease-accounting',
+    sector:'acc',
+    sectorLabel:'Accounting',
+    title:'Lease Accounting (ASC 842) Agent',
+    description:'Analyse the lease portfolio under ASC 842 / IFRS 16 — right-of-use assets, lease liabilities, modifications, and impairments. ClickHouse stores granular lease data so AI agents can investigate balance integrity, model what-if scenarios, and support the audit.',
+    schema:`-- Lease Accounting Schema
+CREATE TABLE leases (
+    lease_id        String,
+    entity_code     String,
+    asset_class     Enum8('REAL_ESTATE'=1,'EQUIPMENT'=2,'VEHICLE'=3,'IT'=4),
+    lease_start     Date,
+    lease_end       Date,
+    monthly_payment Float64,
+    discount_rate   Float64,
+    rou_asset       Float64,
+    lease_liability Float64,
+    classification  Enum8('OPERATING'=1,'FINANCE'=2)
+) ENGINE = MergeTree()
+ORDER BY (lease_start, entity_code);
+
+CREATE TABLE lease_payments (
+    payment_id      UInt64,
+    lease_id        String,
+    period          Date,
+    cash_paid       Float64,
+    interest_expense Float64,
+    principal_reduction Float64
+) ENGINE = MergeTree()
+ORDER BY (period, lease_id);
+
+CREATE TABLE lease_modifications (
+    mod_id          UInt64,
+    lease_id        String,
+    mod_date        Date,
+    mod_type        Enum8('EXTENSION'=1,'TERMINATION'=2,'PAYMENT_CHANGE'=3,'SCOPE_CHANGE'=4),
+    impact_rou      Float64,
+    impact_liability Float64
+) ENGINE = MergeTree()
+ORDER BY (mod_date, lease_id);
+
+CREATE TABLE rate_curves (
+    period          Date,
+    tenor_years     UInt8,
+    rate            Float64
+) ENGINE = MergeTree()
+ORDER BY (period, tenor_years);`,
+    sampleData:`INSERT INTO leases VALUES
+('L-001', 'US_CO', 1, '2022-01-01', '2031-12-31', 85000,  0.045, 7100000, 7250000, 1),
+('L-002', 'UK_CO', 1, '2023-06-01', '2028-05-31', 32000,  0.052, 1620000, 1680000, 1),
+('L-003', 'US_CO', 4, '2024-01-15', '2027-01-14',  4200,  0.061,  140000,  148000, 2);
+
+INSERT INTO lease_payments VALUES
+(1, 'L-001', '2024-03-01', 85000, 27200, 57800),
+(2, 'L-002', '2024-03-01', 32000,  7280, 24720),
+(3, 'L-003', '2024-03-01',  4200,   754,  3446);
+
+INSERT INTO lease_modifications VALUES
+(1, 'L-002', '2024-02-15', 1, 280000, 295000);
+
+INSERT INTO rate_curves VALUES
+('2024-03-31', 5, 0.044),
+('2024-03-31', 7, 0.046),
+('2024-03-31', 10, 0.048);`,
+    qanda:[
+      {q:'Show our total ROU asset and lease liability by asset class',
+       a:'Aggregate rou_asset and lease_liability grouped by asset_class. The agent presents the lease balance sheet exposure with classification mix.'},
+      {q:'Which leases are due to expire in the next 12 months?',
+       a:'Filter leases where lease_end is within 12 months. The agent surfaces renewal decisions and the materiality of recommitment.'},
+      {q:'What if we extended all real estate leases by 5 years?',
+       a:'Recompute rou_asset and lease_liability under extended terms using current rate curves. The agent shows balance-sheet expansion and P&L impact.'},
+      {q:'Strategy: should we early-terminate underutilised office leases?',
+       a:'Estimate termination costs vs. remaining lease liability and projected vacancy savings. The agent recommends specific leases to exit and quantifies break-even.'},
+      {q:'Simulate the impact of a 100bp increase in discount rates on new leases',
+       a:'Recompute liability for upcoming lease starts at higher rate_curves. The agent shows the smaller liability that would result and balance-sheet implications.'},
+      {q:'Investigate leases with unusual interest-to-cash ratios',
+       a:'Compute interest_expense / cash_paid by lease and flag outliers. The agent surfaces likely classification or computation errors.'},
+      {q:'What if we converted all operating leases to finance leases under proposed standards?',
+       a:'Reclassify and recompute P&L pattern (front-loaded vs. straight-line). The agent shows the EBITDA impact and disclosure changes.'},
+      {q:'Which entities have the most concentrated lease exposure?',
+       a:'Sum lease_liability by entity_code and rank. The agent identifies concentration risk and balance sheet exposure by jurisdiction.'},
+      {q:'Compare our lease portfolio cost trend against market rent indices',
+       a:'Analyse monthly_payment trajectory against external benchmarks. The agent assesses whether portfolio pricing is competitive.'},
+      {q:'Build a lease disclosure footnote summary for the annual report',
+       a:'Aggregate maturities, weighted-average term, weighted-average discount rate, and total liability. The agent assembles standard disclosure content.'}
+    ]
+  },
+  // ─── CRYPTO ────────────────────────────────────────────────────────────────
+  {
+    id:'wallet-analytics',
+    sector:'cry',
+    sectorLabel:'Crypto',
+    title:'On-Chain Wallet Analytics Agent',
+    description:'Analyse wallet flows, balances, and behavioural clusters across blockchains to investigate counterparty exposure, fund flows, and abusive patterns. ClickHouse stores billions of transactions so AI agents can trace movement, cluster wallets, and surface intelligence at scale.',
+    schema:`-- Wallet Analytics Schema
+CREATE TABLE chain_transactions (
+    tx_hash         String,
+    chain           String,
+    block_number    UInt64,
+    from_addr       String,
+    to_addr         String,
+    asset           String,
+    amount          Float64,
+    usd_value       Float64,
+    tx_time         DateTime
+) ENGINE = MergeTree()
+ORDER BY (tx_time, from_addr);
+
+CREATE TABLE wallet_clusters (
+    cluster_id      String,
+    address         String,
+    cluster_label   String,
+    confidence_pct  Float32,
+    last_updated    Date
+) ENGINE = ReplacingMergeTree()
+ORDER BY (cluster_id, address);
+
+CREATE TABLE address_tags (
+    address         String,
+    tag             String,
+    source          String,
+    risk_score      Float32
+) ENGINE = ReplacingMergeTree()
+ORDER BY address;
+
+CREATE TABLE wallet_balances (
+    address         String,
+    asset           String,
+    balance         Float64,
+    usd_value       Float64,
+    snapshot_time   DateTime
+) ENGINE = MergeTree()
+ORDER BY (snapshot_time, address);`,
+    sampleData:`INSERT INTO chain_transactions VALUES
+('0xabc1', 'ethereum', 19500001, '0xWalletA', '0xExchangeB', 'USDC', 500000,    500000.00, '2024-03-15 09:14:22'),
+('0xabc2', 'ethereum', 19500002, '0xWalletA', '0xMixerC',    'ETH',     12,     38400.00,  '2024-03-15 09:18:11'),
+('0xabc3', 'ethereum', 19500003, '0xMixerC',  '0xWalletD',   'ETH',     12,     38400.00,  '2024-03-15 11:42:55'),
+('0xabc4', 'tron',       8200001,'TWalletE',  'TExchangeF',  'USDT', 250000,    250000.00, '2024-03-15 14:00:30');
+
+INSERT INTO wallet_clusters VALUES
+('CL-100', '0xWalletA', 'Suspect group A',  0.82, '2024-03-14'),
+('CL-100', '0xWalletD', 'Suspect group A',  0.78, '2024-03-14'),
+('CL-200', 'TWalletE',  'Sanctioned entity',0.95, '2024-03-10');
+
+INSERT INTO address_tags VALUES
+('0xMixerC',     'Mixer',           'Chainalysis', 0.95),
+('0xExchangeB',  'CEX - Tier1',     'Internal',    0.10),
+('TExchangeF',   'CEX - High Risk', 'Sanctions',   0.85);
+
+INSERT INTO wallet_balances VALUES
+('0xWalletA', 'USDC',  100000, 100000, '2024-03-15 23:00:00'),
+('0xWalletA', 'ETH',     5.2,  16640,  '2024-03-15 23:00:00'),
+('0xWalletD', 'ETH',    11.8,  37760,  '2024-03-15 23:00:00');`,
+    qanda:[
+      {q:'Trace fund flows from wallet 0xWalletA over the last week',
+       a:'Walk chain_transactions outbound from 0xWalletA across hops, joining counterparties to address_tags. The agent assembles a flow narrative showing where funds went and what risk tags were touched.'},
+      {q:'Which wallets in our customer base interacted with high-risk mixers?',
+       a:'Join chain_transactions to address_tags where tag = Mixer and surface from/to wallets with internal customer mappings. The agent flags compliance-sensitive interactions.'},
+      {q:'Show daily aggregate flows from sanctioned addresses to centralised exchanges',
+       a:'Filter chain_transactions where from_addr or to_addr is in clusters labelled Sanctioned. Group by day and exchange tag. The agent highlights jurisdictional risk events.'},
+      {q:'What if we tightened our sanctions screening to two-hop instead of one-hop?',
+       a:'Re-evaluate flagged transactions including indirect counterparty exposure. The agent shows the increase in alert volume and risk surface coverage.'},
+      {q:'Strategy: should we delist tokens with predominantly mixer-sourced inflows?',
+       a:'Aggregate flows by asset and source-tag. The agent identifies tokens with structural exposure and recommends listing review.'},
+      {q:'Investigate wallet behaviour patterns that suggest a single beneficial owner',
+       a:'Cluster wallets by transaction timing, gas patterns, and counterparty overlap. The agent surfaces likely entity links beyond explicit cluster_id.'},
+      {q:'Simulate the impact of a stablecoin freeze on our customer balances',
+       a:'Sum wallet_balances for the affected stablecoin across customers. The agent quantifies frozen exposure and customer impact.'},
+      {q:'Which customer wallets showed sudden spike in activity inconsistent with prior history?',
+       a:'Compute moving-average daily transaction count and flag spikes. The agent surfaces wallets needing enhanced due diligence review.'},
+      {q:'What if we blocked all transactions involving privacy mixers?',
+       a:'Quantify volume of impacted transactions and customer count. The agent presents the operational and customer-experience trade-off.'},
+      {q:'Build a SAR-ready narrative for wallet 0xWalletA',
+       a:'Compile all relevant transactions, cluster memberships, and counterparty risk tags. The agent assembles a regulator-ready filing draft.'}
+    ]
+  },
+  {
+    id:'stablecoin-reserves',
+    sector:'cry',
+    sectorLabel:'Crypto',
+    title:'Stablecoin Reserves & Peg Monitoring Agent',
+    description:'Analyse stablecoin reserves, redemption flows, and on-chain peg behaviour to monitor stability and reserve adequacy. ClickHouse holds reserve attestations, mint/burn events, and DEX trading data so AI agents can investigate peg pressure and stress-test redemption capacity.',
+    schema:`-- Stablecoin Reserves Schema
+CREATE TABLE reserve_holdings (
+    snapshot_date   Date,
+    issuer          String,
+    asset_class     String,
+    instrument      String,
+    market_value    Float64,
+    maturity_days   Nullable(UInt32)
+) ENGINE = MergeTree()
+ORDER BY (snapshot_date, issuer);
+
+CREATE TABLE supply_events (
+    event_id        UInt64,
+    issuer          String,
+    event_type      Enum8('MINT'=1,'BURN'=2),
+    amount          Float64,
+    chain           String,
+    event_time      DateTime
+) ENGINE = MergeTree()
+ORDER BY (event_time, issuer);
+
+CREATE TABLE peg_observations (
+    obs_id          UInt64,
+    issuer          String,
+    venue           String,
+    price_usd       Float64,
+    obs_time        DateTime,
+    deviation_bps   Int32
+) ENGINE = MergeTree()
+ORDER BY (obs_time, issuer);
+
+CREATE TABLE redemption_queue (
+    request_id      String,
+    issuer          String,
+    requested_amount Float64,
+    request_time    DateTime,
+    fulfilled_time  Nullable(DateTime),
+    status          String
+) ENGINE = MergeTree()
+ORDER BY (request_time, issuer);`,
+    sampleData:`INSERT INTO reserve_holdings VALUES
+('2024-03-31', 'IssuerX', 'TBills',     'US 1M T-Bill',   8200000000, 30),
+('2024-03-31', 'IssuerX', 'TBills',     'US 3M T-Bill',  12500000000, 90),
+('2024-03-31', 'IssuerX', 'Cash',       'Bank deposit',    500000000, NULL),
+('2024-03-31', 'IssuerX', 'RepoO/N',    'Tri-party repo', 4000000000, 1);
+
+INSERT INTO supply_events VALUES
+(1, 'IssuerX', 1, 800000000, 'ethereum', '2024-03-15 10:14:00'),
+(2, 'IssuerX', 2, 350000000, 'ethereum', '2024-03-15 14:22:00'),
+(3, 'IssuerX', 1, 1200000000,'tron',     '2024-03-15 18:45:00');
+
+INSERT INTO peg_observations VALUES
+(1, 'IssuerX', 'Curve', 0.9982, '2024-03-15 13:00:00', -18),
+(2, 'IssuerX', 'Uni',   0.9991, '2024-03-15 13:00:00', -9),
+(3, 'IssuerX', 'CEX-A', 1.0001, '2024-03-15 13:00:00',  1);
+
+INSERT INTO redemption_queue VALUES
+('R-001', 'IssuerX', 250000000, '2024-03-15 09:00:00', '2024-03-15 12:00:00', 'FULFILLED'),
+('R-002', 'IssuerX', 800000000, '2024-03-15 10:30:00', NULL,                  'PENDING');`,
+    qanda:[
+      {q:'Show our current reserve composition by asset class',
+       a:'Aggregate reserve_holdings by asset_class. The agent presents the latest reserve mix and flags any concentration deviating from policy.'},
+      {q:'How many days of redemptions can we cover with cash and overnight repo?',
+       a:'Compute liquid reserves vs. recent average redemption volume. The agent estimates liquidity coverage in days.'},
+      {q:'What if redemptions spiked to 10% of supply in 24 hours?',
+       a:'Stress test redemption_queue against available liquid reserves and project shortfall. The agent quantifies the gap and recommends contingency funding.'},
+      {q:'Investigate peg deviations greater than 25bps over the last week',
+       a:'Filter peg_observations where abs(deviation_bps) > 25 and group by venue and time. The agent identifies sustained pressure points and likely venues.'},
+      {q:'Strategy: should we shift reserve duration to capture higher yields?',
+       a:'Model lengthening WAM by 30 days and project additional yield vs. liquidity risk. The agent shows the trade-off in basis points and stress capacity.'},
+      {q:'Simulate the impact of a major bank deposit becoming temporarily unavailable',
+       a:'Remove the affected cash position and recompute liquidity coverage. The agent shows the operational impact and recommended mitigations.'},
+      {q:'Which chain has the most volatile mint/burn activity?',
+       a:'Aggregate supply_events by chain and compute net change variance. The agent identifies chains with concentrated demand or speculative pressure.'},
+      {q:'What if we introduced a redemption fee at >1% of supply per day?',
+       a:'Recompute redemption flow patterns under fee scheme. The agent estimates the throttling effect and revenue impact.'},
+      {q:'Build a transparency report covering reserve composition, peg, and redemptions',
+       a:'Assemble reserve_holdings, peg_observations, and redemption_queue into a public-facing snapshot. The agent prepares a structured monthly attestation.'},
+      {q:'Show whether peg pressure correlates with redemption queue length',
+       a:'Join peg deviation magnitude to pending redemption volume by hour. The agent diagnoses whether redemption stress drives market pricing or vice versa.'}
+    ]
+  },
+  {
+    id:'dex-liquidity',
+    sector:'cry',
+    sectorLabel:'Crypto',
+    title:'DEX Liquidity & MEV Agent',
+    description:'Analyse decentralised exchange pools, swaps, and MEV (sandwich, arbitrage, JIT) activity. ClickHouse stores high-volume swap events so AI agents can investigate liquidity quality, MEV exposure, and explore strategy improvements for liquidity providers and traders.',
+    schema:`-- DEX Liquidity Schema
+CREATE TABLE pools (
+    pool_address    String,
+    protocol        String,
+    token0          String,
+    token1          String,
+    fee_tier_bps    UInt16,
+    tvl_usd         Float64,
+    snapshot_time   DateTime
+) ENGINE = MergeTree()
+ORDER BY (snapshot_time, pool_address);
+
+CREATE TABLE swaps (
+    tx_hash         String,
+    pool_address    String,
+    sender          String,
+    recipient       String,
+    amount0_in      Float64,
+    amount1_in      Float64,
+    amount0_out     Float64,
+    amount1_out     Float64,
+    block_number    UInt64,
+    log_index       UInt32,
+    swap_time       DateTime,
+    price_impact_bps Int32
+) ENGINE = MergeTree()
+ORDER BY (swap_time, pool_address);
+
+CREATE TABLE mev_events (
+    event_id        UInt64,
+    block_number    UInt64,
+    bot_address     String,
+    pattern         Enum8('SANDWICH'=1,'ARBITRAGE'=2,'JIT_LP'=3,'LIQUIDATION'=4),
+    profit_usd      Float64,
+    victim_tx       Nullable(String),
+    detected_at     DateTime
+) ENGINE = MergeTree()
+ORDER BY (detected_at, pattern);
+
+CREATE TABLE lp_positions (
+    position_id     String,
+    pool_address    String,
+    owner           String,
+    tick_lower      Int32,
+    tick_upper      Int32,
+    liquidity       Float64,
+    fees_earned_usd Float64,
+    opened_at       DateTime
+) ENGINE = MergeTree()
+ORDER BY (opened_at, pool_address);`,
+    sampleData:`INSERT INTO pools VALUES
+('0xPool1','UniV3','USDC','ETH',  5,  240000000, '2024-03-15 12:00:00'),
+('0xPool2','UniV3','USDC','ETH', 30,   85000000, '2024-03-15 12:00:00'),
+('0xPool3','Curve','USDC','USDT', 1,  410000000, '2024-03-15 12:00:00');
+
+INSERT INTO swaps VALUES
+('0xtx1','0xPool1','0xUser1','0xUser1', 100000, 0,        0,   30.4, 19500001, 1, '2024-03-15 12:14:00',  -8),
+('0xtx2','0xPool1','0xBotA', '0xBotA',  500000, 0,        0,  150.6, 19500002, 2, '2024-03-15 12:14:01', -45),
+('0xtx3','0xPool1','0xBotA', '0xBotA',       0, 150.6, 502300,    0, 19500003, 1, '2024-03-15 12:14:02',  44);
+
+INSERT INTO mev_events VALUES
+(1, 19500002, '0xBotA', 1, 2200, '0xtx1', '2024-03-15 12:14:03'),
+(2, 19510001, '0xBotB', 2, 5400, NULL,    '2024-03-15 14:22:00');
+
+INSERT INTO lp_positions VALUES
+('LP-1','0xPool1','0xLPa', -195000, -190000, 8500000, 22000, '2024-03-01 09:00:00'),
+('LP-2','0xPool2','0xLPb', -195000, -190000, 1200000,  4800, '2024-03-05 11:30:00');`,
+    qanda:[
+      {q:'Which pools generate the highest fee yield for LPs?',
+       a:'Aggregate lp_positions.fees_earned_usd / liquidity by pool_address. The agent ranks pools by capital efficiency for liquidity providers.'},
+      {q:'Show recent sandwich attacks targeting our customers',
+       a:'Filter mev_events where pattern = SANDWICH and join victim_tx to swaps for our user wallets. The agent quantifies user losses and frequency.'},
+      {q:'What if we set a default 30bps slippage cap for retail swaps?',
+       a:'Replay historical swaps under tighter slippage and project sandwich-protection benefit. The agent shows reduction in MEV losses vs. failed-transaction increase.'},
+      {q:'Investigate whether certain pools attract disproportionate MEV',
+       a:'Group mev_events by victim pool. The agent identifies pools with structural MEV exposure and recommends routing changes.'},
+      {q:'Strategy: should we direct liquidity toward 5bps tier instead of 30bps?',
+       a:'Compare TVL, volume, and LP returns across tiers. The agent recommends tier choice based on volume-to-TVL economics.'},
+      {q:'Simulate JIT liquidity strategy on a major pool',
+       a:'Identify large incoming swaps and model JIT entry/exit profit. The agent shows expected profit vs. capital and risk.'},
+      {q:'Which LP positions are now out of range?',
+       a:'Filter lp_positions where current price is outside tick_lower/tick_upper. The agent flags inactive capital and recommends rebalancing.'},
+      {q:'What if we deployed a private mempool for our customer swaps?',
+       a:'Estimate MEV avoidance benefit based on historical sandwich exposure. The agent presents the value-add against integration cost.'},
+      {q:'Build an MEV impact report for the top 100 customer wallets',
+       a:'Aggregate MEV losses and counts by user wallet. The agent produces a customer-impact view ready for product decisions.'},
+      {q:'Investigate whether LP fee growth keeps pace with impermanent loss',
+       a:'Compare fee yield to IL estimates from price movements. The agent shows whether LP positions are earning real risk-adjusted returns.'}
+    ]
+  },
+  {
+    id:'crypto-aml',
+    sector:'cry',
+    sectorLabel:'Crypto',
+    title:'Crypto AML & Travel Rule Agent',
+    description:'Analyse customer transactions, counterparty exposure, and Travel Rule compliance for a crypto exchange or VASP. ClickHouse stores transaction-level data alongside risk intelligence so AI agents can investigate suspicious activity and prepare regulator-ready evidence.',
+    schema:`-- Crypto AML Schema
+CREATE TABLE customer_txns (
+    txn_id          UInt64,
+    customer_id     UInt64,
+    direction       Enum8('DEPOSIT'=1,'WITHDRAWAL'=2,'INTERNAL'=3),
+    asset           String,
+    amount          Float64,
+    usd_value       Float64,
+    counterparty_addr String,
+    counterparty_vasp Nullable(String),
+    txn_time        DateTime,
+    travel_rule_status String
+) ENGINE = MergeTree()
+ORDER BY (txn_time, customer_id);
+
+CREATE TABLE customers (
+    customer_id     UInt64,
+    risk_rating     Enum8('LOW'=1,'MEDIUM'=2,'HIGH'=3),
+    country         String,
+    onboarded_date  Date,
+    pep_flag        UInt8
+) ENGINE = ReplacingMergeTree()
+ORDER BY customer_id;
+
+CREATE TABLE counterparty_intel (
+    address         String,
+    risk_score      Float32,
+    tags            String,
+    source          String,
+    last_updated    Date
+) ENGINE = ReplacingMergeTree()
+ORDER BY address;
+
+CREATE TABLE aml_alerts (
+    alert_id        UInt64,
+    customer_id     UInt64,
+    txn_id          Nullable(UInt64),
+    rule_id         String,
+    severity        Enum8('LOW'=1,'MEDIUM'=2,'HIGH'=3,'CRITICAL'=4),
+    detected_at     DateTime,
+    status          Enum8('OPEN'=1,'INVESTIGATING'=2,'CLOSED'=3,'SAR_FILED'=4)
+) ENGINE = MergeTree()
+ORDER BY (detected_at, severity);`,
+    sampleData:`INSERT INTO customer_txns VALUES
+(1, 1001, 1, 'BTC',  0.5,  18000, 'bc1q...abc',  'VASP-A',     '2024-03-15 09:14:00', 'COMPLIANT'),
+(2, 1001, 2, 'USDT', 50000,50000, '0xabc...123', 'Unknown',    '2024-03-15 14:22:00', 'INSUFFICIENT'),
+(3, 1002, 1, 'ETH',  3.2,  10240,'0xMixerC',     NULL,         '2024-03-15 16:00:00', 'SKIPPED'),
+(4, 1003, 2, 'BTC',  0.05,  1800,'bc1q...xyz',   'VASP-B',     '2024-03-15 18:05:00', 'COMPLIANT');
+
+INSERT INTO customers VALUES
+(1001, 2, 'GB', '2022-01-15', 0),
+(1002, 3, 'RU', '2023-06-10', 0),
+(1003, 1, 'US', '2020-09-20', 0);
+
+INSERT INTO counterparty_intel VALUES
+('0xMixerC',   0.95, 'Mixer',          'Chainalysis', '2024-03-14'),
+('bc1q...xyz', 0.10, 'CEX',            'Internal',    '2024-03-14'),
+('0xabc...123',0.55, 'Unknown',        'Internal',    '2024-03-14');
+
+INSERT INTO aml_alerts VALUES
+(1, 1002, 3, 'R-MIXER',  4, '2024-03-15 16:05:00', 1),
+(2, 1001, 2, 'R-TRAVEL', 2, '2024-03-15 14:25:00', 1);`,
+    qanda:[
+      {q:'Show high-severity AML alerts opened in the last 7 days',
+       a:'Filter aml_alerts where severity in (HIGH, CRITICAL) and detected_at >= now() - 7 days. The agent prioritises investigation queue with customer context.'},
+      {q:'Which customers have transacted with mixer-tagged addresses?',
+       a:'Join customer_txns to counterparty_intel where tags contain Mixer. The agent surfaces direct exposure with txn-level evidence.'},
+      {q:'How many transactions failed Travel Rule compliance this month?',
+       a:'Count customer_txns where travel_rule_status in (INSUFFICIENT, SKIPPED). The agent breaks down by counterparty type and asset to identify root causes.'},
+      {q:'What if we required Travel Rule for transactions above $1k instead of $3k?',
+       a:'Recount affected transactions and estimate operational uplift. The agent shows the compliance benefit vs. customer-experience cost.'},
+      {q:'Investigate customers whose risk rating changed in the last quarter',
+       a:'Track risk_rating evolution and join to recent activity. The agent identifies upgrades requiring enhanced due diligence.'},
+      {q:'Strategy: which counterparty VASPs deserve enhanced due diligence?',
+       a:'Aggregate alert volume and transaction count by counterparty_vasp. The agent recommends a partner risk tiering and review cadence.'},
+      {q:'Simulate the impact of enforcing strict Travel Rule on un-hosted wallets',
+       a:'Apply a hypothetical rule blocking unhosted withdrawals and quantify customer impact. The agent presents trade-offs against regulator expectations.'},
+      {q:'Which customers warrant SAR filing based on combined indicators?',
+       a:'Score customers on alert frequency, counterparty risk, and PEP/jurisdiction flags. The agent ranks SAR candidates and explains rationale.'},
+      {q:'What if we onboarded a new VASP partner with high-risk customer base?',
+       a:'Project alert volume and operational headcount required. The agent presents the cost of partnership and recommended controls.'},
+      {q:'Build a regulator response pack for a specific customer investigation',
+       a:'Compile transaction history, counterparty intel, and alert chronology. The agent assembles a regulator-ready dossier.'}
+    ]
+  },
+  {
+    id:'token-treasury',
+    sector:'cry',
+    sectorLabel:'Crypto',
+    title:'Token Treasury Management Agent',
+    description:'Analyse a DAO or company token treasury — diversification, runway, vesting flows, and hedging needs. ClickHouse holds treasury balances, vesting schedules, and market data so AI agents can investigate runway and recommend treasury strategy.',
+    schema:`-- Token Treasury Schema
+CREATE TABLE treasury_balances (
+    snapshot_date   Date,
+    asset           String,
+    quantity        Float64,
+    usd_value       Float64,
+    venue           String
+) ENGINE = MergeTree()
+ORDER BY (snapshot_date, asset);
+
+CREATE TABLE vesting_schedule (
+    grant_id        String,
+    recipient       String,
+    asset           String,
+    quantity        Float64,
+    vest_date       Date,
+    cliff_passed    UInt8,
+    type            Enum8('EMPLOYEE'=1,'INVESTOR'=2,'FOUNDER'=3,'COMMUNITY'=4)
+) ENGINE = MergeTree()
+ORDER BY (vest_date, asset);
+
+CREATE TABLE expense_run_rate (
+    period          Date,
+    category        String,
+    usd_amount      Float64
+) ENGINE = MergeTree()
+ORDER BY (period, category);
+
+CREATE TABLE token_market_data (
+    asset           String,
+    price_usd       Float64,
+    volume_24h      Float64,
+    realised_vol_30d Float64,
+    snapshot_time   DateTime
+) ENGINE = MergeTree()
+ORDER BY (snapshot_time, asset);`,
+    sampleData:`INSERT INTO treasury_balances VALUES
+('2024-03-31', 'NATIVE', 220000000, 264000000, 'On-chain'),
+('2024-03-31', 'USDC',         0,    45000000, 'Multisig'),
+('2024-03-31', 'ETH',         800,    2560000, 'Multisig'),
+('2024-03-31', 'BTC',          12,     432000, 'Custody');
+
+INSERT INTO vesting_schedule VALUES
+('G-001', 'team-pool',    'NATIVE', 5000000, '2024-04-15', 1, 1),
+('G-002', 'investor-pool','NATIVE', 8000000, '2024-04-15', 1, 2),
+('G-003', 'community',    'NATIVE', 2000000, '2024-04-30', 0, 4);
+
+INSERT INTO expense_run_rate VALUES
+('2024-03-01', 'Engineering', 1200000),
+('2024-03-01', 'Marketing',    400000),
+('2024-03-01', 'Operations',   300000);
+
+INSERT INTO token_market_data VALUES
+('NATIVE', 1.20,  18000000, 0.92, '2024-03-31 23:59:00'),
+('ETH',    3200,  9500000000, 0.55, '2024-03-31 23:59:00'),
+('BTC',   36000,  18000000000,0.42, '2024-03-31 23:59:00');`,
+    qanda:[
+      {q:'How many months of runway do we have at current burn rate?',
+       a:'Sum stable assets and divide by monthly expense_run_rate. The agent reports runway and the buffer assuming stable token cannot be liquidated easily.'},
+      {q:'What is our exposure to NATIVE token concentration?',
+       a:'Compute % of total treasury in NATIVE. The agent flags if concentration exceeds policy and quantifies single-asset risk.'},
+      {q:'Show vesting unlocks scheduled for the next 90 days',
+       a:'Filter vesting_schedule for vest_date in next 90 days and aggregate by recipient type. The agent surfaces likely sell pressure on token price.'},
+      {q:'What if we sold 20% of NATIVE into stables over 3 months via TWAP?',
+       a:'Model price impact using volume_24h and realised volatility, project stable-runway extension. The agent shows the cost vs. benefit of diversification.'},
+      {q:'Strategy: should we hedge ETH and BTC exposure via options?',
+       a:'Compute exposure usd_value and propose collar/put cost using realised_vol_30d. The agent presents hedging cost vs. drawdown protection.'},
+      {q:'Simulate the impact of a 50% token price drop on our runway',
+       a:'Reprice NATIVE balance at 50% lower and recompute runway. The agent shows resilience under stress and any shortfall vs. policy minimum.'},
+      {q:'Investigate whether vesting cliffs correlate with historical price drawdowns',
+       a:'Join vesting unlock dates to price returns. The agent surfaces patterns to inform unlock-day market-making strategy.'},
+      {q:'What if we yielded our stables in DeFi at 5% APY?',
+       a:'Model incremental yield against smart-contract risk. The agent presents the strategy vs. holding in custody and recommends sizing.'},
+      {q:'Which expense categories grew fastest year-over-year?',
+       a:'Pivot expense_run_rate by category and period. The agent shows pace and recommends categories for review.'},
+      {q:'Build a treasury board pack with runway, concentration, and unlock schedule',
+       a:'Compile balances, vesting, expenses, and price/volatility view. The agent assembles a structured board-ready dashboard.'}
+    ]
+  },
+  // ─── CORPORATE FINANCE ─────────────────────────────────────────────────────
+  {
+    id:'cash-forecasting',
+    sector:'cf',
+    sectorLabel:'Corporate Finance',
+    title:'Cash Flow Forecasting Agent',
+    description:'Analyse historical cash receipts, disbursements, and working-capital cycles to produce direct-method cash forecasts. ClickHouse holds AR, AP, and bank flow data so AI agents can investigate variances, model scenarios, and recommend cash actions.',
+    schema:`-- Cash Forecasting Schema
+CREATE TABLE bank_flows (
+    flow_id         UInt64,
+    entity_code     String,
+    flow_date       Date,
+    direction       Enum8('IN'=1,'OUT'=2),
+    category        String,
+    amount          Float64,
+    counterparty    String
+) ENGINE = MergeTree()
+ORDER BY (flow_date, entity_code);
+
+CREATE TABLE ar_aging (
+    invoice_id      String,
+    customer_id     String,
+    amount          Float64,
+    invoice_date    Date,
+    due_date        Date,
+    days_overdue    Int32,
+    status          String
+) ENGINE = MergeTree()
+ORDER BY (due_date, customer_id);
+
+CREATE TABLE ap_aging (
+    bill_id         String,
+    supplier_id     String,
+    amount          Float64,
+    bill_date       Date,
+    due_date        Date,
+    payment_terms   String
+) ENGINE = MergeTree()
+ORDER BY (due_date, supplier_id);
+
+CREATE TABLE forecast_assumptions (
+    assumption_id   String,
+    description     String,
+    base_value      Float64,
+    upside_value    Float64,
+    downside_value  Float64
+) ENGINE = ReplacingMergeTree()
+ORDER BY assumption_id;`,
+    sampleData:`INSERT INTO bank_flows VALUES
+(1, 'US_CO', '2024-03-15', 1, 'Customer collection',  4500000, 'CUST-A'),
+(2, 'US_CO', '2024-03-15', 2, 'Payroll',               2800000, 'Payroll'),
+(3, 'US_CO', '2024-03-18', 1, 'Customer collection',  1200000, 'CUST-B'),
+(4, 'UK_CO', '2024-03-19', 2, 'Tax payment',          1850000, 'HMRC');
+
+INSERT INTO ar_aging VALUES
+('INV-1001', 'CUST-A', 4500000, '2024-02-15', '2024-03-15', 0,  'PAID'),
+('INV-1002', 'CUST-B', 2800000, '2024-02-22', '2024-03-22', 7,  'OPEN'),
+('INV-1003', 'CUST-C',  920000, '2024-01-10', '2024-02-10', 49, 'OPEN');
+
+INSERT INTO ap_aging VALUES
+('BILL-501', 'SUPP-X', 1200000, '2024-03-01', '2024-03-31', 'NET30'),
+('BILL-502', 'SUPP-Y',  450000, '2024-03-05', '2024-04-04', 'NET30');
+
+INSERT INTO forecast_assumptions VALUES
+('A-COLL', 'Customer collection days', 38, 32, 45),
+('A-CAPEX','Quarterly capex',          5000000, 3500000, 7500000);`,
+    qanda:[
+      {q:'Forecast cash position for the next 13 weeks',
+       a:'Combine ar_aging expected collections, ap_aging payment dates, and recurring categories from bank_flows. The agent assembles a 13-week direct-method forecast with weekly net movement.'},
+      {q:'Show our actual vs. forecast variance for the past 4 weeks',
+       a:'Compare prior forecast against bank_flows actuals by category. The agent diagnoses where forecasts consistently miss and explains drivers.'},
+      {q:'What if customer A delays payment by 30 days?',
+       a:'Move CUST-A receipts later in forecast and recompute weekly cash position. The agent shows minimum cash and any covenant or liquidity risks triggered.'},
+      {q:'Strategy: should we offer a 1% early-pay discount to top customers?',
+       a:'Model discount cost vs. accelerated collection benefit using forecast_assumptions. The agent shows NPV of the trade-off and recommends sizing.'},
+      {q:'Simulate the impact of capex spend at upside scenario level',
+       a:'Apply A-CAPEX upside_value to forecast and recompute liquidity coverage. The agent shows whether existing facilities are sufficient.'},
+      {q:'Which customers most heavily skew our cash inflows?',
+       a:'Aggregate ar_aging by customer_id over 12 months and compute concentration. The agent flags concentration risk to inflows.'},
+      {q:'What if we extended our supplier payment terms from NET30 to NET60?',
+       a:'Shift ap_aging payment dates by 30 days and recompute peak cash. The agent shows working-capital benefit and supplier-relationship risk.'},
+      {q:'Investigate cash flow seasonality across the last three years',
+       a:'Bucket bank_flows by month and compute year-on-year trends. The agent surfaces seasonal patterns informing facility sizing and timing.'},
+      {q:'Build a treasurer-ready scenario pack with base, upside, and downside',
+       a:'Apply each assumption set across forecast and present three scenarios side by side. The agent narrates the inflection points.'},
+      {q:'How much liquidity headroom do we have under the worst-case scenario?',
+       a:'Combine downside assumptions, project minimum cash, and compare to facilities and covenants. The agent quantifies headroom and recommends contingency draws.'}
+    ]
+  },
+  {
+    id:'capital-structure',
+    sector:'cf',
+    sectorLabel:'Corporate Finance',
+    title:'Capital Structure Optimisation Agent',
+    description:'Analyse debt portfolio, cost of capital, and refinancing windows to optimise capital structure. ClickHouse stores facility-level term data and rate environment so AI agents can investigate risk, model alternatives, and recommend financing strategy.',
+    schema:`-- Capital Structure Schema
+CREATE TABLE debt_facilities (
+    facility_id     String,
+    type            Enum8('TERM_LOAN'=1,'REVOLVER'=2,'BOND'=3,'COMMERCIAL_PAPER'=4),
+    principal       Float64,
+    drawn           Float64,
+    coupon_pct      Float64,
+    floating_spread Nullable(Float64),
+    benchmark       Nullable(String),
+    maturity_date   Date,
+    covenants       String
+) ENGINE = MergeTree()
+ORDER BY (maturity_date, facility_id);
+
+CREATE TABLE rate_environment (
+    snapshot_date   Date,
+    benchmark       String,
+    tenor_years     UInt8,
+    rate_pct        Float64
+) ENGINE = MergeTree()
+ORDER BY (snapshot_date, benchmark);
+
+CREATE TABLE peer_metrics (
+    company         String,
+    sector          String,
+    leverage_ratio  Float64,
+    interest_cover  Float64,
+    rating          String
+) ENGINE = ReplacingMergeTree()
+ORDER BY company;
+
+CREATE TABLE equity_metrics (
+    snapshot_date   Date,
+    market_cap      Float64,
+    beta            Float64,
+    equity_risk_premium Float64,
+    risk_free_rate  Float64
+) ENGINE = MergeTree()
+ORDER BY snapshot_date;`,
+    sampleData:`INSERT INTO debt_facilities VALUES
+('TL-2025', 1, 500000000, 500000000, 5.20, NULL,  NULL,    '2025-09-15', 'Net leverage <= 3.5x'),
+('REV-1',   2, 750000000, 200000000, 0.00, 1.85,  'SOFR',  '2027-06-30', 'Net leverage <= 3.5x'),
+('BND-2030',3, 600000000, 600000000, 4.75, NULL,  NULL,    '2030-03-15', 'Springing covenants'),
+('CP-1',    4, 250000000, 100000000, 0.00, 0.40,  'SOFR',  '2024-09-15', 'None');
+
+INSERT INTO rate_environment VALUES
+('2024-03-31', 'SOFR',     1, 5.32),
+('2024-03-31', 'SOFR',     5, 4.10),
+('2024-03-31', 'SOFR',    10, 4.05),
+('2024-03-31', 'EURIBOR',  5, 3.20);
+
+INSERT INTO peer_metrics VALUES
+('PeerCo A', 'Industrial', 2.8, 6.5, 'BBB+'),
+('PeerCo B', 'Industrial', 3.4, 4.8, 'BBB-'),
+('PeerCo C', 'Industrial', 2.2, 8.0, 'A-');
+
+INSERT INTO equity_metrics VALUES
+('2024-03-31', 4200000000, 1.15, 0.055, 0.045);`,
+    qanda:[
+      {q:'What is our current weighted average cost of debt?',
+       a:'Compute drawn-weighted coupon (or coupon + spread for floating) across debt_facilities. The agent reports WACD with breakdown by instrument type.'},
+      {q:'Show our debt maturity wall over the next 5 years',
+       a:'Bucket debt_facilities by maturity_date by year. The agent surfaces refinancing concentration and recommends laddering options.'},
+      {q:'What if we refinanced TL-2025 at current 5-year rates?',
+       a:'Apply current SOFR 5y + spread to the term loan and project new coupon and savings/cost. The agent quantifies P&L impact.'},
+      {q:'Strategy: should we issue a new bond now or wait for rate cuts?',
+       a:'Compare current 10y rate vs. forward curve to project break-even hold. The agent presents waiting risk vs. refinancing certainty.'},
+      {q:'Simulate the impact of a 1-notch credit downgrade on our debt costs',
+       a:'Apply spread widening based on peer_metrics rating differentials. The agent estimates incremental annual interest cost.'},
+      {q:'How does our leverage compare against peer companies?',
+       a:'Compute net leverage from debt_facilities and EBITDA, then compare against peer_metrics. The agent presents positioning vs. peers and rating implications.'},
+      {q:'What if we were to do a $200m equity buyback funded with new debt?',
+       a:'Project leverage and interest cover under new debt. The agent shows EPS accretion vs. covenant headroom and rating implications.'},
+      {q:'Investigate covenant headroom under stressed EBITDA assumptions',
+       a:'Apply -25% EBITDA scenario and recompute net leverage and interest cover ratios. The agent flags facilities approaching limits.'},
+      {q:'Build a refinancing strategy pack ranking facilities by priority',
+       a:'Score facilities by maturity proximity, current vs. market rate, and covenant tightness. The agent recommends the optimal sequence and timing.'},
+      {q:'Compute our weighted average cost of capital using current market data',
+       a:'Combine WACD with cost of equity from equity_metrics (CAPM). The agent reports WACC with sensitivities to leverage and beta.'}
+    ]
+  },
+  {
+    id:'working-capital',
+    sector:'cf',
+    sectorLabel:'Corporate Finance',
+    title:'Working Capital Optimisation Agent',
+    description:'Analyse receivables, payables, and inventory cycles to identify working capital improvement opportunities. ClickHouse stores granular AR/AP/inventory data so AI agents can investigate cycle drivers, segment customers/suppliers, and quantify cash release.',
+    schema:`-- Working Capital Schema
+CREATE TABLE customer_terms (
+    customer_id     String,
+    standard_terms  String,
+    actual_dso_days Float64,
+    annual_revenue  Float64,
+    region          String
+) ENGINE = ReplacingMergeTree()
+ORDER BY customer_id;
+
+CREATE TABLE supplier_terms (
+    supplier_id     String,
+    standard_terms  String,
+    actual_dpo_days Float64,
+    annual_spend    Float64,
+    category        String
+) ENGINE = ReplacingMergeTree()
+ORDER BY supplier_id;
+
+CREATE TABLE inventory_position (
+    sku             String,
+    location        String,
+    quantity        Float64,
+    unit_cost       Float64,
+    days_on_hand    Float64,
+    abc_class       Enum8('A'=1,'B'=2,'C'=3),
+    snapshot_date   Date
+) ENGINE = MergeTree()
+ORDER BY (snapshot_date, sku);
+
+CREATE TABLE working_capital_kpis (
+    period          Date,
+    dso             Float64,
+    dpo             Float64,
+    dio             Float64,
+    ccc             Float64
+) ENGINE = MergeTree()
+ORDER BY period;`,
+    sampleData:`INSERT INTO customer_terms VALUES
+('CUST-A','NET30', 38, 25000000, 'NA'),
+('CUST-B','NET45', 52, 18000000, 'EU'),
+('CUST-C','NET30', 75,  9000000, 'APAC');
+
+INSERT INTO supplier_terms VALUES
+('SUPP-X','NET30', 28, 18000000, 'Raw materials'),
+('SUPP-Y','NET60', 42,  8000000, 'Logistics'),
+('SUPP-Z','NET30', 25,  4000000, 'Services');
+
+INSERT INTO inventory_position VALUES
+('SKU-001','WH-1', 1200, 45,  62, 1, '2024-03-31'),
+('SKU-002','WH-1',  3500, 22, 105, 2, '2024-03-31'),
+('SKU-003','WH-2',   800, 88,  18, 1, '2024-03-31'),
+('SKU-004','WH-2', 12000,  3, 280, 3, '2024-03-31');
+
+INSERT INTO working_capital_kpis VALUES
+('2024-Q1', 48, 32, 78, 94),
+('2023-Q4', 45, 35, 72, 82),
+('2023-Q3', 47, 33, 75, 89);`,
+    qanda:[
+      {q:'Show our cash conversion cycle trend over the last 8 quarters',
+       a:'Plot working_capital_kpis.ccc over time. The agent narrates expansion or contraction and which component is moving.'},
+      {q:'Which customers significantly exceed their contracted payment terms?',
+       a:'Filter customer_terms where actual_dso > parsed standard_terms by 10+ days. The agent surfaces priority collections targets.'},
+      {q:'Show inventory tied up in slow-moving SKUs',
+       a:'Sum quantity × unit_cost where days_on_hand > 90 or abc_class = C. The agent quantifies cash trapped in inventory.'},
+      {q:'What if we tightened DSO by 5 days across our top 50 customers?',
+       a:'Apply 5-day reduction to actual_dso and compute annual cash release using annual_revenue. The agent shows the working-capital release and project ROI.'},
+      {q:'Strategy: should we extend supplier terms via supply-chain finance?',
+       a:'Identify suppliers with shorter actual_dpo than market and model SCF program. The agent quantifies cash release vs. financing cost.'},
+      {q:'Simulate the impact of liquidating slow-moving inventory at 30% discount',
+       a:'Recompute inventory value at discounted prices and project cash release. The agent shows the trade-off between margin loss and cash unlock.'},
+      {q:'Which region has the worst DSO performance and why?',
+       a:'Aggregate customer_terms by region. The agent surfaces APAC slippage and explores cultural, contractual, or operational drivers.'},
+      {q:'What if we invoiced customers daily instead of monthly?',
+       a:'Model timing of invoice issuance and collection. The agent estimates DSO improvement and AR-system change impact.'},
+      {q:'Investigate which SKUs drive disproportionate inventory holding',
+       a:'Rank inventory_position by carrying_value × days_on_hand. The agent identifies the 80/20 of working-capital intensity.'},
+      {q:'Build a $50M cash-release programme with prioritised actions',
+       a:'Combine DSO, DPO, and inventory levers ranked by ease and impact. The agent assembles a structured plan with sequenced quick wins and structural changes.'}
+    ]
+  },
+  {
+    id:'ma-screening',
+    sector:'cf',
+    sectorLabel:'Corporate Finance',
+    title:'M&A Target Screening Agent',
+    description:'Analyse the universe of potential acquisition targets against strategic criteria — financial fit, valuation, geography, and synergy potential. ClickHouse holds target intelligence and historical comps so AI agents can investigate fit and explore valuation scenarios.',
+    schema:`-- M&A Screening Schema
+CREATE TABLE target_universe (
+    target_id       String,
+    company_name    String,
+    sector          String,
+    geography       String,
+    revenue         Float64,
+    ebitda          Float64,
+    growth_rate     Float64,
+    ownership       String,
+    last_round_value Nullable(Float64)
+) ENGINE = ReplacingMergeTree()
+ORDER BY target_id;
+
+CREATE TABLE strategic_fit (
+    target_id       String,
+    product_overlap Float32,
+    customer_overlap Float32,
+    capability_gap_filled String,
+    fit_score       Float32
+) ENGINE = MergeTree()
+ORDER BY target_id;
+
+CREATE TABLE comp_transactions (
+    transaction_id  String,
+    target_company  String,
+    sector          String,
+    deal_value      Float64,
+    revenue_multiple Float64,
+    ebitda_multiple Float64,
+    deal_date       Date
+) ENGINE = MergeTree()
+ORDER BY (deal_date, sector);
+
+CREATE TABLE synergy_estimates (
+    target_id       String,
+    revenue_synergy Float64,
+    cost_synergy    Float64,
+    integration_cost Float64,
+    confidence      Enum8('LOW'=1,'MEDIUM'=2,'HIGH'=3)
+) ENGINE = MergeTree()
+ORDER BY target_id;`,
+    sampleData:`INSERT INTO target_universe VALUES
+('T-001','BetaSoft Inc',     'Software',  'NA',     45000000,  9000000, 0.32, 'PE-backed', 220000000),
+('T-002','GammaParts Ltd',   'Industrial','EU',    120000000, 14400000, 0.08, 'Family',   NULL),
+('T-003','DeltaSecure GmbH', 'Software',  'EU',     22000000,  5500000, 0.45, 'VC-backed',180000000),
+('T-004','EpsilonCloud',     'Software',  'NA',     18000000,  2500000, 0.65, 'Founder',  NULL);
+
+INSERT INTO strategic_fit VALUES
+('T-001', 0.7, 0.3, 'AI/ML capability',     0.78),
+('T-002', 0.4, 0.6, 'Manufacturing footprint',0.62),
+('T-003', 0.6, 0.2, 'EU GTM',                0.71),
+('T-004', 0.8, 0.4, 'Cloud-native architecture',0.85);
+
+INSERT INTO comp_transactions VALUES
+('CT-1', 'AcmeSoft',   'Software',  280000000, 6.0, 22, '2023-09-12'),
+('CT-2', 'AcmeIndustries','Industrial',680000000,3.5, 9,  '2023-11-05'),
+('CT-3', 'AcmeCloud',  'Software',  410000000, 8.5, 32, '2024-01-22');
+
+INSERT INTO synergy_estimates VALUES
+('T-001', 4500000,  3200000, 4000000, 2),
+('T-003', 2800000,  1500000, 2500000, 3),
+('T-004', 1800000,   900000, 1200000, 2);`,
+    qanda:[
+      {q:'Rank our top targets by combined fit score and growth rate',
+       a:'Join target_universe to strategic_fit and weight fit_score with growth_rate. The agent presents a prioritised target list with rationale.'},
+      {q:'What is the implied valuation range for T-004 using sector comps?',
+       a:'Apply revenue_multiple and ebitda_multiple from comp_transactions to T-004 financials. The agent presents a valuation range with comp justification.'},
+      {q:'What if we acquired T-001 at a 30% premium to last round?',
+       a:'Compute deal_value = 1.3 × last_round_value and back-solve multiples vs. comps. The agent assesses whether the premium is justified by fit and synergies.'},
+      {q:'Strategy: which target offers the best EPS accretion in year 1?',
+       a:'Combine cost_synergy with target EBITDA and acquirer P/E. The agent ranks accretion candidates and explains assumption sensitivities.'},
+      {q:'Simulate the impact of paying 50% stock vs. 100% cash for T-001',
+       a:'Model dilution under stock consideration vs. leverage under cash. The agent shows financial profile differences and shareholder impact.'},
+      {q:'Show targets where capability gap aligns with our 3-year strategy',
+       a:'Filter strategic_fit where capability_gap_filled matches strategic priorities. The agent narrows the universe to strategically aligned targets.'},
+      {q:'Investigate which sector comps have moved most over the past year',
+       a:'Compare ebitda_multiple by sector across deal_date quarters. The agent shows whether valuations are expanding or compressing.'},
+      {q:'What if we were forced to divest T-002 within 24 months due to antitrust?',
+       a:'Apply post-merger divestiture haircut and recompute deal economics. The agent quantifies risk-adjusted returns under regulatory constraint.'},
+      {q:'Which targets have the highest synergy-to-integration cost ratio?',
+       a:'Compute (revenue_synergy + cost_synergy) / integration_cost from synergy_estimates. The agent ranks targets by net synergy efficiency.'},
+      {q:'Build an investment committee briefing for the top 3 targets',
+       a:'Compile financials, fit, valuation, and synergy estimates for each. The agent assembles a structured IC pack ready for review.'}
+    ]
+  },
+  {
+    id:'fx-hedging',
+    sector:'cf',
+    sectorLabel:'Corporate Finance',
+    title:'FX Exposure & Hedging Agent',
+    description:'Analyse currency exposures across the business and assess hedging effectiveness against P&L volatility. ClickHouse stores transactional FX data, hedge positions, and rate scenarios so AI agents can investigate exposure and recommend hedging strategy.',
+    schema:`-- FX Hedging Schema
+CREATE TABLE fx_exposures (
+    exposure_id     String,
+    entity_code     String,
+    currency        String,
+    exposure_type   Enum8('TRANSACTIONAL'=1,'TRANSLATIONAL'=2,'ECONOMIC'=3),
+    notional        Float64,
+    direction       Enum8('LONG'=1,'SHORT'=2),
+    expected_settle Date
+) ENGINE = MergeTree()
+ORDER BY (expected_settle, currency);
+
+CREATE TABLE fx_hedges (
+    hedge_id        String,
+    instrument_type Enum8('FORWARD'=1,'OPTION'=2,'SWAP'=3,'NDF'=4),
+    pair            String,
+    notional        Float64,
+    direction       Enum8('BUY'=1,'SELL'=2),
+    rate            Float64,
+    trade_date      Date,
+    maturity_date   Date,
+    counterparty    String,
+    designation     String
+) ENGINE = MergeTree()
+ORDER BY (maturity_date, pair);
+
+CREATE TABLE fx_rates (
+    pair            String,
+    rate_date       Date,
+    spot            Float64,
+    forward_1m      Float64,
+    forward_3m      Float64,
+    forward_12m     Float64,
+    realised_vol_30d Float64
+) ENGINE = MergeTree()
+ORDER BY (rate_date, pair);
+
+CREATE TABLE policy_limits (
+    limit_id        String,
+    currency        String,
+    max_unhedged_pct Float64,
+    max_tenor_months UInt8
+) ENGINE = ReplacingMergeTree()
+ORDER BY limit_id;`,
+    sampleData:`INSERT INTO fx_exposures VALUES
+('E-001','UK_CO','EUR', 1, 12000000, 1, '2024-06-30'),
+('E-002','UK_CO','USD', 1,  8500000, 2, '2024-09-30'),
+('E-003','US_CO','GBP', 2,  4200000, 1, '2024-12-31'),
+('E-004','US_CO','JPY', 1, 320000000,1, '2024-12-31');
+
+INSERT INTO fx_hedges VALUES
+('H-001', 1, 'EURGBP',  6000000, 2, 0.85,  '2024-03-15', '2024-06-30', 'BankA','CFH'),
+('H-002', 2, 'EURGBP',  4000000, 2, 0.86,  '2024-03-20', '2024-06-30', 'BankB','CFH'),
+('H-003', 1, 'GBPUSD',  4200000, 1, 1.265, '2024-03-25', '2024-12-31', 'BankA','CFH');
+
+INSERT INTO fx_rates VALUES
+('EURGBP','2024-03-31', 0.8551, 0.8540, 0.8525, 0.8480, 0.072),
+('GBPUSD','2024-03-31', 1.2641, 1.2655, 1.2682, 1.2750, 0.085),
+('USDJPY','2024-03-31', 151.40, 151.10, 150.55, 148.20, 0.092);
+
+INSERT INTO policy_limits VALUES
+('PL-EUR','EUR', 0.20, 12),
+('PL-USD','USD', 0.30, 12),
+('PL-JPY','JPY', 0.50, 6);`,
+    qanda:[
+      {q:'Show our net unhedged exposure by currency',
+       a:'Compute exposures - hedges by currency, directionally aware. The agent presents the residual at-risk position.'},
+      {q:'How does our hedging position compare against policy limits?',
+       a:'Compare unhedged % against policy_limits.max_unhedged_pct by currency. The agent flags breaches needing immediate attention.'},
+      {q:'What if EUR weakened 5% against GBP?',
+       a:'Apply rate shock to fx_exposures and netting hedges to compute P&L impact. The agent reports translation and transactional exposure under stress.'},
+      {q:'Strategy: should we use options instead of forwards on JPY exposure?',
+       a:'Compare forward cost vs. option premium and asymmetric payoff. The agent recommends instrument choice based on volatility and conviction.'},
+      {q:'Simulate hedging effectiveness over the last 4 quarters',
+       a:'Compare realised vs. hypothetical unhedged P&L. The agent shows volatility reduction achieved and any over- or under-hedging.'},
+      {q:'Which hedges are designated as cash flow hedges and qualify for hedge accounting?',
+       a:'Filter fx_hedges where designation = CFH and validate against documentation. The agent surfaces hedge accounting candidates and any de-designation risk.'},
+      {q:'What if our forecast EUR revenues come in 20% lower than expected?',
+       a:'Recompute net exposure under reduced revenue and over-hedged position. The agent shows mark-to-market loss potential and de-hedging actions.'},
+      {q:'Investigate cost of carry across our forward hedge book',
+       a:'Compute (forward_rate - spot) / spot annualised for each hedge. The agent shows the hedging cost concentrated in specific currency pairs.'},
+      {q:'Which counterparty has the most concentrated hedge exposure?',
+       a:'Aggregate fx_hedges by counterparty and notional. The agent flags counterparty concentration risk and recommends diversification.'},
+      {q:'Build a board-ready FX risk pack with exposure, hedges, P&L and policy compliance',
+       a:'Compile exposure summary, hedge effectiveness, rate sensitivity, and policy adherence. The agent produces a structured risk committee deliverable.'}
+    ]
   }
 ];
 
@@ -3062,7 +5208,57 @@ const systemPrompts = {
 
   'broker-performance': `You are an insurance broker performance specialist. Your role is to evaluate broker conversion, premium growth, and claims performance across the distribution panel. Always retrieve the relevant data and present it as a formatted markdown table, then explain where distribution quality is strongest or weakest.`,
 
-  'catastrophe-exposure': `You are a catastrophe risk and aggregation specialist for an insurer. Your role is to assess exposure concentrations, evaluate reinsurance adequacy, and quantify net retained loss. Always retrieve the relevant data and present it as a formatted markdown table, then explain where risk appetite limits are being approached and what portfolio actions would reduce aggregate exposure.`
+  'catastrophe-exposure': `You are a catastrophe risk and aggregation specialist for an insurer. Your role is to assess exposure concentrations, evaluate reinsurance adequacy, and quantify net retained loss. Always retrieve the relevant data and present it as a formatted markdown table, then explain where risk appetite limits are being approached and what portfolio actions would reduce aggregate exposure.`,
+
+  'transfer-pricing': `You are a transfer pricing specialist for a multinational tax team. Your role is to evaluate intercompany pricing against arm's length benchmarks and recommend documentation or restructuring actions. Always retrieve the relevant data and present it as a formatted markdown table, then explain margin variances, jurisdictional implications, and audit-defence considerations.`,
+
+  'tax-provision': `You are a tax provision and ETR specialist. Your role is to compute and explain effective tax rate drivers across the group, model planning scenarios, and assess deferred tax positions. Always retrieve the relevant data and present it as a formatted markdown table, then explain ETR drivers, sensitivity to rate changes, and provision adequacy.`,
+
+  'indirect-tax': `You are an indirect tax compliance specialist focused on VAT, GST, and sales tax. Your role is to validate filings, surface anomalies, and improve recovery rates. Always retrieve the relevant data and present it as a formatted markdown table, then explain compliance risks, recovery opportunities, and process improvements.`,
+
+  'tax-loss-optimisation': `You are a tax planning specialist focused on loss and credit utilisation across the group. Your role is to maximise the value of tax assets before expiry and to model restructuring or income-acceleration strategies. Always retrieve the relevant data and present it as a formatted markdown table, then explain trapped value, utilisation strategies, and trade-offs.`,
+
+  'tax-controversy': `You are a tax controversy and audit defence specialist. Your role is to manage open audits, evaluate technical positions, and recommend settlement or litigation strategies. Always retrieve the relevant data and present it as a formatted markdown table, then explain exposure, reserve adequacy, and tactical considerations.`,
+
+  'portfolio-company-performance': `You are a private equity portfolio operations specialist. Your role is to evaluate portfolio company performance against the value creation plan and recommend interventions. Always retrieve the relevant data and present it as a formatted markdown table, then explain performance drivers, plan variance, and operating committee actions.`,
+
+  'deal-pipeline': `You are a private equity deal sourcing and pursuit analyst. Your role is to evaluate the pipeline by win-rate, cost, and strategic fit, and to recommend resource allocation. Always retrieve the relevant data and present it as a formatted markdown table, then explain win-rate dynamics, source-channel economics, and pursuit strategy.`,
+
+  'fund-performance': `You are a private equity fund performance and attribution specialist. Your role is to decompose returns by value driver and compare across vintages and funds. Always retrieve the relevant data and present it as a formatted markdown table, then explain IRR/MOIC drivers, scenario sensitivities, and LP-relevant insights.`,
+
+  'value-creation': `You are a value creation tracking specialist for a PE operating team. Your role is to monitor delivery of value-creation initiatives across portfolio companies and identify replicable playbooks. Always retrieve the relevant data and present it as a formatted markdown table, then explain delivery against plan, RAG status, and intervention priorities.`,
+
+  'lp-reporting': `You are a private equity LP reporting and capital management specialist. Your role is to model capital calls, distributions, and LP-level positions and respond to LP queries. Always retrieve the relevant data and present it as a formatted markdown table, then explain pacing, DPI/RVPI, and LP-specific implications.`,
+
+  'close-acceleration': `You are a financial close acceleration specialist. Your role is to identify bottlenecks, manual JE patterns, and automation opportunities to compress close timelines. Always retrieve the relevant data and present it as a formatted markdown table, then explain critical path, automation candidates, and process improvements.`,
+
+  'revenue-recognition': `You are an ASC 606 / IFRS 15 revenue recognition specialist. Your role is to validate contract treatment, performance obligation allocations, and recognition schedules. Always retrieve the relevant data and present it as a formatted markdown table, then explain revenue treatment, judgment areas, and audit risk.`,
+
+  'intercompany-recon': `You are an intercompany reconciliation specialist. Your role is to identify breaks, root-cause systemic issues, and recommend process or technology fixes. Always retrieve the relevant data and present it as a formatted markdown table, then explain break drivers, aging, and remediation priorities.`,
+
+  'audit-anomaly': `You are an internal audit and SOX controls specialist. Your role is to surface unusual journal entries and patterns warranting investigation, and to recommend control improvements. Always retrieve the relevant data and present it as a formatted markdown table, then explain risk indicators, severity, and follow-up actions.`,
+
+  'lease-accounting': `You are an ASC 842 / IFRS 16 lease accounting specialist. Your role is to validate lease balances, evaluate modifications, and model portfolio actions. Always retrieve the relevant data and present it as a formatted markdown table, then explain balance integrity, classification, and strategic implications.`,
+
+  'wallet-analytics': `You are an on-chain analytics specialist. Your role is to trace fund flows, cluster wallets, and surface counterparty risk for compliance and intelligence purposes. Always retrieve the relevant data and present it as a formatted markdown table, then explain flow patterns, risk exposure, and recommended actions.`,
+
+  'stablecoin-reserves': `You are a stablecoin reserves and peg-stability specialist. Your role is to validate reserve adequacy, monitor peg behaviour, and stress-test redemption capacity. Always retrieve the relevant data and present it as a formatted markdown table, then explain reserve composition, liquidity coverage, and policy implications.`,
+
+  'dex-liquidity': `You are a DeFi liquidity and MEV specialist. Your role is to evaluate pool economics, LP returns, and MEV exposure across DEX activity. Always retrieve the relevant data and present it as a formatted markdown table, then explain capital efficiency, MEV impact, and strategy recommendations.`,
+
+  'crypto-aml': `You are a crypto AML and Travel Rule compliance specialist. Your role is to investigate suspicious activity, evaluate counterparty risk, and prepare regulator-ready evidence. Always retrieve the relevant data and present it as a formatted markdown table, then explain risk indicators, compliance gaps, and required actions.`,
+
+  'token-treasury': `You are a DAO/token treasury management specialist. Your role is to evaluate runway, diversification, and unlock dynamics, and to recommend treasury strategy. Always retrieve the relevant data and present it as a formatted markdown table, then explain runway, concentration risk, and strategic options.`,
+
+  'cash-forecasting': `You are a corporate treasury cash forecasting specialist. Your role is to produce direct-method forecasts, diagnose variance, and model what-if scenarios. Always retrieve the relevant data and present it as a formatted markdown table, then explain weekly cash position, key drivers, and recommended treasury actions.`,
+
+  'capital-structure': `You are a corporate finance capital structure specialist. Your role is to evaluate debt portfolio, cost of capital, and refinancing strategy. Always retrieve the relevant data and present it as a formatted markdown table, then explain WACD/WACC, refinancing priorities, and rating implications.`,
+
+  'working-capital': `You are a working capital optimisation specialist. Your role is to identify cash release opportunities across receivables, payables, and inventory. Always retrieve the relevant data and present it as a formatted markdown table, then explain cycle drivers, opportunity sizing, and recommended interventions.`,
+
+  'ma-screening': `You are an M&A target screening specialist for corporate development. Your role is to evaluate strategic fit, valuation, and synergy potential across candidate targets. Always retrieve the relevant data and present it as a formatted markdown table, then explain target prioritisation, valuation context, and strategic rationale.`,
+
+  'fx-hedging': `You are an FX risk management specialist for corporate treasury. Your role is to evaluate currency exposures, hedging effectiveness, and policy compliance. Always retrieve the relevant data and present it as a formatted markdown table, then explain residual risk, hedge economics, and strategy recommendations.`
 };
 
 const generatedSampleData = {
@@ -3909,7 +6105,7 @@ function renderGrid() {
   const filtered = currentFilter === 'all' ? scenarios : scenarios.filter(s => s.sector === currentFilter);
 
   const sectors = [...new Set(filtered.map(s => s.sector))];
-  const sectorOrder = ['cm','rb','cb','pay','comp','wm','am','ins'];
+  const sectorOrder = ['cm','rb','cb','pay','comp','wm','am','ins','tax','pe','acc','cry','cf'];
   const sectorNames = {
     cm:'Capital Markets',
     rb:'Retail Banking',
@@ -3918,7 +6114,12 @@ function renderGrid() {
     comp:'Compliance',
     wm:'Wealth Management',
     am:'Asset Management',
-    ins:'Insurance'
+    ins:'Insurance',
+    tax:'Tax',
+    pe:'Private Equity',
+    acc:'Accounting',
+    cry:'Crypto',
+    cf:'Corporate Finance'
   };
 
   container.innerHTML = sectorOrder
