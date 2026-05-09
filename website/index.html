@@ -52,7 +52,7 @@ nav{background:#0d1220;border-bottom:1px solid #1e2d47;padding:0 2rem;display:fl
 
 /* DETAIL PAGE */
 #detail-page{display:flex;flex-direction:column;height:calc(100vh - 60px)}
-.detail-layout{display:flex;flex:1;overflow:hidden}
+.detail-layout{display:flex;flex:1;overflow:hidden;position:relative}
 
 /* LEFT PANEL */
 .detail-left{width:50%;border-right:1px solid #1e2d47;overflow-y:auto;padding:2rem}
@@ -222,6 +222,130 @@ footer{border-top:1px solid #1e2d47;padding:2.5rem 2rem 1.2rem;text-align:center
 
 /* HIDDEN */
 .hidden{display:none!important}
+
+/* THEME TOGGLE */
+.theme-toggle{display:flex;align-items:center;gap:.4rem;padding:.35rem .65rem;border:1px solid #1e2d47;border-radius:6px;background:transparent;color:#94a3b8;cursor:pointer;font-size:.75rem;transition:all .2s}
+.theme-toggle:hover{color:#e2e8f0;border-color:#334155}
+.theme-toggle svg{width:14px;height:14px}
+.nav-actions{display:flex;align-items:center;gap:.6rem}
+
+/* LEFT PANEL COLLAPSE */
+.left-toggle{position:absolute;top:1rem;right:1rem;width:30px;height:30px;border-radius:6px;border:1px solid #1e2d47;background:#0d1220;color:#94a3b8;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;z-index:5}
+.left-toggle:hover{color:#e2e8f0;border-color:#2563eb}
+.left-toggle svg{width:14px;height:14px}
+.detail-left{position:relative;transition:width .25s ease,padding .25s ease,opacity .2s ease}
+.detail-layout.left-collapsed .detail-left{width:0;padding-left:0;padding-right:0;border-right:none;overflow:hidden;opacity:0}
+.detail-layout.left-collapsed .detail-right{width:100%}
+.left-restore{display:none;position:absolute;top:1rem;left:1rem;width:30px;height:30px;border-radius:6px;border:1px solid #1e2d47;background:#0d1220;color:#94a3b8;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;z-index:5}
+.left-restore:hover{color:#e2e8f0;border-color:#2563eb}
+.left-restore svg{width:14px;height:14px}
+.detail-layout.left-collapsed .left-restore{display:flex}
+.detail-right{position:relative;transition:width .25s ease}
+
+/* LIGHT MODE OVERRIDES */
+body.light{background:#f8fafc;color:#1e293b}
+body.light nav{background:#ffffff;border-bottom-color:#e2e8f0}
+body.light .nav-back{color:#475569;border-color:#e2e8f0}
+body.light .nav-back:hover{color:#0f172a;border-color:#cbd5e1}
+body.light .theme-toggle{color:#475569;border-color:#e2e8f0}
+body.light .theme-toggle:hover{color:#0f172a;border-color:#cbd5e1}
+body.light .hero h1{background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 50%,#2563eb 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+body.light .hero h1 span{background:linear-gradient(135deg,#2563eb 0%,#7c3aed 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+body.light .hero p{color:#475569}
+body.light .hero-byline{color:#64748b}
+body.light .hero-byline a{color:#2563eb}
+body.light .hero-quant-item{color:#94a3b8;border-color:#e2e8f0;background:#ffffff}
+body.light .hero-badge{background:#eff6ff;border-color:#bfdbfe;color:#2563eb}
+body.light .tab{border-color:#e2e8f0;color:#64748b;background:transparent}
+body.light .tab:hover{color:#0f172a;border-color:#cbd5e1}
+body.light .tab.active{background:#eff6ff;border-color:#2563eb;color:#1d4ed8}
+body.light .sector-label{color:#64748b;border-bottom-color:#e2e8f0}
+body.light .card{background:#ffffff;border-color:#e2e8f0}
+body.light .card:hover{border-color:#2563eb;box-shadow:0 8px 30px rgba(37,99,235,.12)}
+body.light .card h3{color:#0f172a}
+body.light .card p{color:#64748b}
+body.light .card-arrow{color:#cbd5e1}
+body.light .detail-left{border-right-color:#e2e8f0}
+body.light .detail-right{background:#f1f5f9}
+body.light .detail h2{color:#0f172a}
+body.light .detail-desc{color:#475569}
+body.light .chat-header{border-bottom-color:#e2e8f0}
+body.light .chat-header-text h3{color:#0f172a}
+body.light .chat-header-text p{color:#94a3b8}
+body.light .chat-empty-icon{background:#ffffff;border-color:#e2e8f0}
+body.light .chat-empty-icon svg{color:#cbd5e1}
+body.light .chat-empty h4{color:#475569}
+body.light .chat-empty p{color:#94a3b8}
+body.light .msg.assistant .msg-bubble{background:#ffffff;border-color:#e2e8f0;color:#1e293b}
+body.light .msg-meta{color:#94a3b8}
+body.light .msg.assistant .msg-bubble.thinking{color:#64748b}
+body.light .msg-bubble h3{color:#0f172a}
+body.light .msg-bubble h4{color:#1e293b}
+body.light .msg-bubble hr{border-top-color:#e2e8f0}
+body.light .msg-bubble blockquote{border-left-color:#2563eb;color:#475569;background:#f8fafc}
+body.light .msg-bubble code{background:#f1f5f9;color:#0369a1}
+body.light .msg-bubble pre{background:#f8fafc;border-color:#e2e8f0}
+body.light .msg-bubble pre code{color:#0f172a}
+body.light .msg-bubble strong{color:#0f172a}
+body.light .msg-bubble th{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+body.light .msg-bubble td{border-color:#e2e8f0;color:#1e293b}
+body.light .msg-bubble tr:nth-child(even) td{background:#f8fafc}
+body.light .msg-bubble tr:hover td{background:#eff6ff}
+body.light .thinking-block{background:#f8fafc;border-color:#bfdbfe}
+body.light .thinking-block summary{color:#64748b}
+body.light .thinking-block summary:hover{color:#0f172a}
+body.light .thinking-content{color:#475569;border-top-color:#e2e8f0}
+body.light .query-block{background:#f8fafc;border-color:#bae6fd}
+body.light .query-block summary{color:#64748b}
+body.light .query-block summary:hover{color:#0f172a}
+body.light .query-block-rows{color:#94a3b8}
+body.light .query-sql{color:#0369a1;border-top-color:#e2e8f0}
+body.light .process-block{background:#f8fafc;border-color:#e2e8f0}
+body.light .process-block summary{color:#64748b}
+body.light .process-block summary:hover{color:#0f172a}
+body.light .process-content{color:#475569;border-top-color:#e2e8f0}
+body.light .typing-dots span{background:#cbd5e1}
+body.light .chat-input-wrap{border-top-color:#e2e8f0}
+body.light .chat-input-box{background:#ffffff;border-color:#e2e8f0;color:#0f172a}
+body.light .chat-input-box::placeholder{color:#cbd5e1}
+body.light .chat-input-box:focus{border-color:#2563eb}
+body.light .chat-hint{color:#cbd5e1}
+body.light .section-num{background:#eff6ff;border-color:#2563eb;color:#1d4ed8}
+body.light .section-title{color:#0f172a}
+body.light .section-arrow{color:#cbd5e1}
+body.light .section-head.foldable:hover .section-title{color:#2563eb}
+body.light pre{background:#f8fafc;border-color:#e2e8f0;color:#1e293b}
+body.light .kw{color:#1d4ed8}
+body.light .cm-c{color:#94a3b8}
+body.light .ty{color:#7c3aed}
+body.light .st{color:#059669}
+body.light .nm{color:#b45309}
+body.light .fn{color:#be185d}
+body.light .qa-item{background:#ffffff;border-color:#e2e8f0}
+body.light .qa-fade-wrap::after{background:linear-gradient(transparent,#f8fafc)}
+body.light .qa-question{color:#0f172a}
+body.light .qa-send{border-color:#e2e8f0;background:#f8fafc;color:#1d4ed8}
+body.light .qa-send:hover{border-color:#2563eb;background:#eff6ff;color:#1e3a8a}
+body.light .qa-more-btn{border-color:#e2e8f0;color:#1d4ed8}
+body.light .qa-more-btn:hover{border-color:#2563eb;background:#eff6ff}
+body.light .deploy-modal{background:rgba(15,23,42,.45)}
+body.light .deploy-modal-card{background:#ffffff;border-color:#e2e8f0}
+body.light .deploy-modal-title{color:#0f172a}
+body.light .deploy-modal-close{background:#f8fafc;border-color:#e2e8f0;color:#475569}
+body.light .deploy-modal-close:hover{border-color:#cbd5e1;color:#0f172a}
+body.light .deploy-modal-body{color:#475569}
+body.light .deploy-secondary{color:#475569;border-color:#e2e8f0}
+body.light .deploy-secondary:hover{border-color:#cbd5e1;color:#0f172a}
+body.light .erd-table{background:#ffffff;border-color:#e2e8f0}
+body.light .erd-table-header{background:#eff6ff;color:#1d4ed8;border-bottom-color:#2563eb}
+body.light .erd-col{border-bottom-color:#f1f5f9}
+body.light .erd-col-name{color:#1e293b}
+body.light .erd-col-type{color:#94a3b8}
+body.light .system-prompt-block{background:#f8fafc;border-color:#bfdbfe;color:#0369a1}
+body.light .system-prompt-label{color:#1d4ed8}
+body.light footer{border-top-color:#e2e8f0;color:#94a3b8}
+body.light .left-toggle,body.light .left-restore{background:#ffffff;border-color:#e2e8f0;color:#475569}
+body.light .left-toggle:hover,body.light .left-restore:hover{color:#0f172a;border-color:#2563eb}
 </style>
 </head>
 <body>
@@ -230,7 +354,13 @@ footer{border-top:1px solid #1e2d47;padding:2.5rem 2rem 1.2rem;text-align:center
   <div class="nav-brand" onclick="showHome()">
     <span class="dot"></span>
   </div>
-  <div class="nav-back hidden" id="nav-back" onclick="showHome()">← Back to scenarios</div>
+  <div class="nav-actions">
+    <div class="nav-back hidden" id="nav-back" onclick="showHome()">← Back to scenarios</div>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <span id="theme-label">Light</span>
+    </button>
+  </div>
 </nav>
 
 <!-- HOME PAGE -->
@@ -6172,10 +6302,16 @@ function renderScenarioDetail(s) {
   const agentName = s.title;
 
   document.getElementById('detail-page').innerHTML = `
-    <div class="detail-layout">
+    <div class="detail-layout" id="detail-layout">
       <div class="detail-left detail" id="detail-left">
+        <button class="left-toggle" onclick="toggleLeftPanel()" aria-label="Collapse panel" title="Collapse panel">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l-5 5 5 5"/></svg>
+        </button>
         <div id="detail-content"></div>
       </div>
+      <button class="left-restore" onclick="toggleLeftPanel()" aria-label="Expand panel" title="Expand panel">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
       <div class="detail-right" id="chat-panel">
         <div class="chat-header">
           <div class="chat-header-icon">
@@ -6619,6 +6755,30 @@ function showHome() {
 
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function applyTheme(theme) {
+  const isLight = theme === 'light';
+  document.body.classList.toggle('light', isLight);
+  const label = document.getElementById('theme-label');
+  const icon = document.getElementById('theme-icon');
+  if (label) label.textContent = isLight ? 'Dark' : 'Light';
+  if (icon) {
+    icon.innerHTML = isLight
+      ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+      : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  }
+}
+function toggleTheme() {
+  const next = document.body.classList.contains('light') ? 'dark' : 'light';
+  localStorage.setItem('theme', next);
+  applyTheme(next);
+}
+applyTheme(localStorage.getItem('theme') || 'dark');
+
+function toggleLeftPanel() {
+  const layout = document.getElementById('detail-layout');
+  if (layout) layout.classList.toggle('left-collapsed');
 }
 
 // Init
