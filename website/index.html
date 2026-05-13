@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#0b0f1a;color:#e2e8f0}
+body{font-family:'Inter',sans-serif;background:#0b0f1a;color:#e2e8f0;color-scheme:dark}
 a{color:inherit;text-decoration:none}
 
 /* NAV */
@@ -243,7 +243,7 @@ footer{border-top:1px solid #1e2d47;padding:2.5rem 2rem 1.2rem;text-align:center
 .detail-right{position:relative;transition:width .25s ease}
 
 /* LIGHT MODE OVERRIDES */
-body.light{background:#f8fafc;color:#1e293b}
+body.light{background:#f8fafc;color:#1e293b;color-scheme:light}
 body.light nav{background:#ffffff;border-bottom-color:#e2e8f0}
 body.light .nav-back{color:#475569;border-color:#e2e8f0}
 body.light .nav-back:hover{color:#0f172a;border-color:#cbd5e1}
@@ -7347,24 +7347,44 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function getPreferredTheme() {
+  const stored = localStorage.getItem('theme');
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function updateHighlightTheme(theme) {
+  const link = document.getElementById('hljs-theme');
+  if (!link) return;
+  link.href = theme === 'light'
+    ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css'
+    : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
+}
+
 function applyTheme(theme) {
   const isLight = theme === 'light';
   document.body.classList.toggle('light', isLight);
   const label = document.getElementById('theme-label');
+  const button = document.getElementById('theme-toggle');
   const icon = document.getElementById('theme-icon');
   if (label) label.textContent = isLight ? 'Dark' : 'Light';
+  if (button) {
+    button.setAttribute('aria-label', isLight ? 'Switch to dark mode' : 'Switch to light mode');
+    button.setAttribute('title', isLight ? 'Switch to dark mode' : 'Switch to light mode');
+  }
   if (icon) {
     icon.innerHTML = isLight
       ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
       : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
   }
+  updateHighlightTheme(theme);
 }
 function toggleTheme() {
   const next = document.body.classList.contains('light') ? 'dark' : 'light';
   localStorage.setItem('theme', next);
   applyTheme(next);
 }
-applyTheme(localStorage.getItem('theme') || 'dark');
+applyTheme(getPreferredTheme());
 
 function toggleLeftPanel() {
   const layout = document.getElementById('detail-layout');
@@ -7376,7 +7396,7 @@ renderGrid();
 </script>
 
 <!-- Highlight.js -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<link id="hljs-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
