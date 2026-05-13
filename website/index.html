@@ -44,7 +44,7 @@ nav{background:#0d1220;border-bottom:1px solid #1e2d47;padding:0 2rem;display:fl
 .card:hover{border-color:#2563eb;transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .card:hover::before{opacity:1}
 .card-sector{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.6rem}
-.cm{color:#f59e0b}.rb{color:#10b981}.cb{color:#06b6d4}.pay{color:#f43f5e}.comp{color:#f97316}.wm{color:#22c55e}.am{color:#8b5cf6}.ins{color:#ef4444}.tax{color:#84cc16}.pe{color:#ec4899}.acc{color:#14b8a6}.cry{color:#eab308}.cf{color:#0ea5e9}
+.cm{color:#f59e0b}.rb{color:#10b981}.cb{color:#06b6d4}.pay{color:#f43f5e}.comp{color:#f97316}.wm{color:#22c55e}.am{color:#8b5cf6}.ins{color:#ef4444}.tax{color:#84cc16}.pe{color:#ec4899}.acc{color:#14b8a6}.cry{color:#eab308}.cf{color:#0ea5e9}.val{color:#818cf8}
 .card h3{font-size:1.05rem;font-weight:600;margin-bottom:.6rem;color:#e2e8f0}
 .card p{font-size:.85rem;color:#64748b;line-height:1.65}
 .card-arrow{position:absolute;top:1.2rem;right:1.2rem;color:#334155;font-size:1rem;transition:all .2s}
@@ -368,7 +368,7 @@ body.light .left-toggle:hover,body.light .left-restore:hover{color:#0f172a;borde
   <div class="hero">
 
     <h1>ClickHouse In Financial Services<br><span>Agentic AI Demonstrator</span></h1>
-    <p>Explore how AI agents analyse and query ClickHouse datasets across capital markets, retail banking, commercial banking, payments, compliance, wealth management, asset management, and insurance — with example schemas, synthetic data, and sample Q&amp;A.</p>
+    <p>Explore how AI agents analyse and query ClickHouse datasets across capital markets, retail banking, commercial banking, payments, compliance, wealth management, asset management, insurance, corporate finance, and valuation advisory — with example schemas, synthetic data, and sample Q&amp;A.</p>
     <div class="hero-byline">By <a href="https://benjaminwootton.com" target="_blank">@benjaminwootton</a></div>
   </div>
 
@@ -387,6 +387,7 @@ body.light .left-toggle:hover,body.light .left-restore:hover{color:#0f172a;borde
     <div class="tab" onclick="filterSector('acc',this)">Accounting</div>
     <div class="tab" onclick="filterSector('cry',this)">Crypto</div>
     <div class="tab" onclick="filterSector('cf',this)">Corporate Finance</div>
+    <div class="tab" onclick="filterSector('val',this)">Valuations</div>
   </div>
 
   <div class="grid-wrap" id="grid-container"></div>
@@ -5256,6 +5257,570 @@ INSERT INTO policy_limits VALUES
       {q:'Build a board-ready FX risk pack with exposure, hedges, P&L and policy compliance',
        a:'Compile exposure summary, hedge effectiveness, rate sensitivity, and policy adherence. The agent produces a structured risk committee deliverable.'}
     ]
+  },
+  {
+    id:'transaction-opinions',
+    sector:'val',
+    sectorLabel:'Valuations',
+    title:'Transaction Opinions Agent',
+    description:'Analyse fairness opinions, solvency opinions, and capital adequacy opinions for M&A, leveraged transactions, and recapitalisations. ClickHouse lets AI agents tie board materials, valuation ranges, leverage cases, and post-deal balance sheet tests together so they can explain whether a proposed transaction sits inside a defensible valuation and liquidity range.',
+    schema:`-- Transaction Opinions Schema
+CREATE TABLE opinion_mandates (
+    mandate_id           String,
+    client_name          String,
+    transaction_name     String,
+    opinion_type         Enum8('FAIRNESS'=1,'SOLVENCY'=2,'CAPITAL_ADEQUACY'=3),
+    transaction_type     Enum8('MERGER'=1,'LBO'=2,'DIVIDEND_RECAP'=3,'SPINOFF'=4),
+    board_committee      String,
+    announcement_date    Date,
+    consideration_value  Float64,
+    currency             String
+) ENGINE = MergeTree()
+ORDER BY (announcement_date, mandate_id);
+
+CREATE TABLE fairness_ranges (
+    mandate_id           String,
+    methodology          Enum8('DCF'=1,'TRADING_COMPS'=2,'TRANSACTION_COMPS'=3,'LBO'=4),
+    scenario_name        String,
+    low_value            Float64,
+    midpoint_value       Float64,
+    high_value           Float64,
+    implied_premium_pct  Float64,
+    selected_flag        UInt8
+) ENGINE = MergeTree()
+ORDER BY (mandate_id, methodology, scenario_name);
+
+CREATE TABLE solvency_tests (
+    mandate_id              String,
+    case_name               String,
+    total_assets            Float64,
+    total_liabilities       Float64,
+    cash_interest_coverage  Float64,
+    fixed_charge_coverage   Float64,
+    minimum_liquidity       Float64,
+    leverage_ratio          Float64,
+    conclusion              Enum8('PASS'=1,'WATCH'=2,'FAIL'=3)
+) ENGINE = MergeTree()
+ORDER BY (mandate_id, case_name);
+
+CREATE TABLE capital_adequacy_tests (
+    mandate_id              String,
+    legal_entity            String,
+    regulatory_capital      Float64,
+    required_capital        Float64,
+    excess_capital          Float64,
+    stressed_drawdown       Float64,
+    post_deal_liquidity     Float64,
+    conclusion              Enum8('PASS'=1,'WATCH'=2,'FAIL'=3)
+) ENGINE = MergeTree()
+ORDER BY (mandate_id, legal_entity);`,
+    sampleData:`INSERT INTO opinion_mandates VALUES
+('OP-001','NorthRiver Holdings','Project Atlas',1,1,'Special Committee','2024-03-18',1450000000,'USD'),
+('OP-002','Harbor Industrial','Project Cedar',2,2,'Board','2024-04-02',980000000,'USD'),
+('OP-003','Meridian Financial','Project Solstice',3,3,'Risk Committee','2024-04-12',420000000,'USD');
+
+INSERT INTO fairness_ranges VALUES
+('OP-001',1,'Base Case',1320000000,1465000000,1590000000,18.0,1),
+('OP-001',2,'Peer Trading',1280000000,1410000000,1525000000,14.0,0),
+('OP-001',3,'Precedent Deals',1360000000,1495000000,1630000000,20.0,0),
+('OP-002',4,'Sponsor Return Case',905000000,975000000,1045000000,22.0,1),
+('OP-003',2,'Capital Buffer Case',390000000,430000000,468000000,11.0,1);
+
+INSERT INTO solvency_tests VALUES
+('OP-002','Management Case',1650000000,1215000000,2.7,1.9,85000000,5.4,1),
+('OP-002','Downside Case',1540000000,1288000000,1.8,1.3,42000000,6.2,2),
+('OP-002','Severe Case',1485000000,1342000000,1.2,0.9,18000000,6.8,3);
+
+INSERT INTO capital_adequacy_tests VALUES
+('OP-003','Meridian Bank NA',610000000,540000000,70000000,45000000,120000000,1),
+('OP-003','Meridian Securities LLC',210000000,190000000,20000000,15000000,46000000,2),
+('OP-003','Meridian HoldCo',155000000,165000000,-10000000,25000000,28000000,3);`,
+    qanda:[
+      {q:'Is the Project Atlas merger price inside the fairness range produced by the selected methodologies?',
+       a:'Compare consideration_value from opinion_mandates to the selected midpoint, low, and high values in fairness_ranges. The agent can show whether the board price is within range and which methodologies are carrying the opinion.'},
+      {q:'Which mandates have downside solvency cases that move from pass to watch or fail?',
+       a:'Filter solvency_tests for cases where conclusion worsens under downside scenarios. The agent can identify deals whose solvency support is fragile.'},
+      {q:'Show the fairness analyses with the highest implied control premium',
+       a:'Rank fairness_ranges by implied_premium_pct and compare against transaction_type. The agent highlights which opinions rely on unusually aggressive premiums.'},
+      {q:'What is the post-deal excess capital by legal entity for Project Solstice?',
+       a:'Query capital_adequacy_tests for mandate OP-003 and compare regulatory_capital to required_capital. The agent can show where buffers remain thin after stress.'},
+      {q:'What if Project Cedar EBITDA were 10% lower than management case at close?',
+       a:'Use the downside solvency rows as a proxy and compare coverage, leverage, and liquidity outcomes against the management case. The agent explains whether the solvency opinion still looks supportable.'},
+      {q:'Which opinions depend most heavily on DCF versus market-based methods?',
+       a:'Group fairness_ranges by mandate and methodology, then compare selected_flag usage and value dispersion. The agent shows where the opinion is most sensitive to intrinsic assumptions.'},
+      {q:'Identify mandates where post-deal liquidity is below stressed drawdown',
+       a:'Filter capital_adequacy_tests where post_deal_liquidity < stressed_drawdown. The agent can surface entities that may require holdco support or revised financing.'},
+      {q:'Prepare a board summary of valuation range, solvency coverage, and capital adequacy conclusions for each open mandate',
+       a:'Join the mandate, fairness, solvency, and capital tables and present a concise opinion dashboard. The agent can produce a board-ready summary with the key caveats.'}
+    ]
+  },
+  {
+    id:'transaction-advisory-valuations',
+    sector:'val',
+    sectorLabel:'Valuations',
+    title:'Transaction Advisory Valuation Agent',
+    description:'Analyse purchase price allocations, carve-out valuations, and tax-driven valuation workstreams such as 409A, transfer pricing, and estate or gift planning. ClickHouse enables AI agents to connect deal value, identified intangibles, stand-alone carve-out financials, and tax valuation assumptions in one place.',
+    schema:`-- Transaction Advisory Valuation Schema
+CREATE TABLE advisory_engagements (
+    engagement_id        String,
+    client_name          String,
+    workstream           Enum8('PPA'=1,'CARVE_OUT'=2,'TAX'=3),
+    transaction_name     String,
+    close_date           Date,
+    purchase_price       Float64,
+    standard_reference   String,
+    lead_director        String
+) ENGINE = MergeTree()
+ORDER BY (close_date, engagement_id);
+
+CREATE TABLE ppa_assets (
+    engagement_id        String,
+    asset_class          String,
+    valuation_method     Enum8('MULTI_PERIOD_EXCESS_EARNINGS'=1,'RELIEF_FROM_ROYALTY'=2,'COST'=3,'WITH_AND_WITHOUT'=4),
+    fair_value           Float64,
+    useful_life_years    Float64,
+    tax_deductible_flag  UInt8
+) ENGINE = MergeTree()
+ORDER BY (engagement_id, asset_class);
+
+CREATE TABLE carveout_financials (
+    engagement_id        String,
+    period_end           Date,
+    revenue              Float64,
+    ebitda               Float64,
+    standalone_costs     Float64,
+    tsa_costs            Float64,
+    run_rate_synergies   Float64
+) ENGINE = MergeTree()
+ORDER BY (engagement_id, period_end);
+
+CREATE TABLE tax_valuation_cases (
+    engagement_id        String,
+    tax_topic            Enum8('409A'=1,'TRANSFER_PRICING'=2,'ESTATE_GIFT'=3),
+    jurisdiction         String,
+    subject_asset        String,
+    indicated_value      Float64,
+    discount_rate        Float64,
+    status               Enum8('DRAFT'=1,'FINAL'=2,'UNDER_REVIEW'=3)
+) ENGINE = MergeTree()
+ORDER BY (engagement_id, tax_topic, jurisdiction);`,
+    sampleData:`INSERT INTO advisory_engagements VALUES
+('TA-001','Apex Software','PPA','Project Helix','2024-03-29',860000000,'ASC 805','Director A'),
+('TA-002','Granite Industrials','CARVE_OUT','Project Forge','2024-04-08',540000000,'IFRS 3','Director B'),
+('TA-003','Summit BioHoldings','TAX','Project Lattice','2024-04-15',0,'409A / IRC 482','Director C');
+
+INSERT INTO ppa_assets VALUES
+('TA-001','Customer Relationships',1,215000000,12,1),
+('TA-001','Developed Technology',4,185000000,7,1),
+('TA-001','Trade Name',2,62000000,15,0),
+('TA-001','Backlog',3,18000000,1.5,1),
+('TA-001','Goodwill',3,305000000,0,0);
+
+INSERT INTO carveout_financials VALUES
+('TA-002','2023-12-31',410000000,72000000,18000000,9500000,14000000),
+('TA-002','2024-01-31',35500000,6100000,1450000,780000,1200000),
+('TA-002','2024-02-29',36200000,6400000,1480000,790000,1200000);
+
+INSERT INTO tax_valuation_cases VALUES
+('TA-003',1,'US','Common Stock',245000000,0.145,2),
+('TA-003',2,'Germany','Limited Risk Distributor',78000000,0.11,3),
+('TA-003',2,'US','IP License',128000000,0.125,1),
+('TA-003',3,'US','Family LP Interest',56000000,0.16,2);`,
+    qanda:[
+      {q:'How was the Project Helix purchase price allocated between identifiable intangibles and goodwill?',
+       a:'Sum ppa_assets by asset_class and compare each fair_value bucket to purchase_price in advisory_engagements. The agent can explain the PPA mix and residual goodwill.'},
+      {q:'Which identified intangible has the shortest useful life and what does that imply for amortisation?',
+       a:'Query ppa_assets ordered by useful_life_years and calculate annual amortisation from fair_value. The agent shows which assets will drive near-term expense.'},
+      {q:'What is the stand-alone EBITDA margin for Project Forge after stranded costs and TSA costs?',
+       a:'Adjust carveout_financials EBITDA for standalone_costs and tsa_costs, then divide by revenue. The agent can present a stand-alone margin bridge for the carve-out.'},
+      {q:'Which tax valuation cases are still draft or under review?',
+       a:'Filter tax_valuation_cases where status is not FINAL. The agent gives the outstanding pipeline by topic, jurisdiction, and indicated value.'},
+      {q:'What if the Project Helix developed technology value were 15% lower?',
+       a:'Reduce the developed technology row in ppa_assets and reallocate the residual to goodwill. The agent can quantify the revised PPA and goodwill sensitivity.'},
+      {q:'Compare the indicated values across 409A, transfer pricing, and estate or gift work for Project Lattice',
+       a:'Group tax_valuation_cases by tax_topic and subject_asset. The agent highlights where different tax purposes are using materially different valuation anchors.'},
+      {q:'Which PPA assets are tax deductible and how much of the purchase price do they represent?',
+       a:'Filter ppa_assets on tax_deductible_flag and sum fair_value as a share of purchase_price. The agent explains the deferred tax and cash tax significance.'},
+      {q:'Build a transaction advisory summary covering PPA allocation, carve-out profitability, and tax valuation status',
+       a:'Join the three workstreams across advisory_engagements. The agent produces a cross-functional transaction valuation status report.'}
+    ]
+  },
+  {
+    id:'portfolio-valuation-fund-advisory',
+    sector:'val',
+    sectorLabel:'Valuations',
+    title:'Portfolio Valuation & Fund Advisory Agent',
+    description:'Analyse quarterly fair value marks for illiquid holdings across private equity, credit, hedge fund side pockets, and BDC portfolios. ClickHouse gives AI agents a recurring valuation dataset to query so they can compare marks, challenge assumptions, and explain where Level 3 risk is building.',
+    schema:`-- Portfolio Valuation & Fund Advisory Schema
+CREATE TABLE fund_holdings (
+    holding_id            String,
+    fund_name             String,
+    fund_type             Enum8('PE'=1,'CREDIT'=2,'HEDGE'=3,'BDC'=4),
+    issuer_name           String,
+    asset_type            String,
+    sector                String,
+    geography             String,
+    ownership_pct         Float64,
+    quarter_end           Date
+) ENGINE = MergeTree()
+ORDER BY (quarter_end, fund_name, holding_id);
+
+CREATE TABLE valuation_marks (
+    holding_id            String,
+    quarter_end           Date,
+    valuation_method      Enum8('MARKET_MULTIPLE'=1,'DCF'=2,'BROKER_QUOTE'=3,'MODELLED_SPREAD'=4),
+    enterprise_value      Float64,
+    net_debt              Float64,
+    equity_value          Float64,
+    fair_value            Float64,
+    valuation_multiple    Float64
+) ENGINE = MergeTree()
+ORDER BY (quarter_end, holding_id);
+
+CREATE TABLE valuation_inputs (
+    holding_id            String,
+    quarter_end           Date,
+    revenue_ltm           Float64,
+    ebitda_ltm            Float64,
+    growth_rate           Float64,
+    discount_rate         Float64,
+    market_spread_bps     Float64,
+    liquidity_discount_pct Float64
+) ENGINE = MergeTree()
+ORDER BY (quarter_end, holding_id);
+
+CREATE TABLE valuation_reviews (
+    holding_id            String,
+    quarter_end           Date,
+    reviewer              String,
+    review_status         Enum8('OPEN'=1,'CHALLENGED'=2,'APPROVED'=3),
+    key_issue             String
+) ENGINE = MergeTree()
+ORDER BY (quarter_end, holding_id, reviewer);`,
+    sampleData:`INSERT INTO fund_holdings VALUES
+('PV-001','Northgate Capital III',1,'Orchid Data','Software','Technology','US',0.42,'2024-03-31'),
+('PV-002','Northgate Credit Opportunities',2,'Atlas Packaging','First Lien Loan','Industrials','US',0.00,'2024-03-31'),
+('PV-003','Summit Special Situations',3,'Crescent Retail','Structured Equity','Consumer','UK',0.18,'2024-03-31'),
+('PV-004','Meridian BDC I',4,'Harbor Clinics','Unitranche Debt','Healthcare','US',0.00,'2024-03-31');
+
+INSERT INTO valuation_marks VALUES
+('PV-001','2024-03-31',1,420000000,55000000,365000000,153300000,14.0),
+('PV-002','2024-03-31',4,0,0,0,89200000,575.0),
+('PV-003','2024-03-31',2,178000000,64000000,114000000,20500000,0.0),
+('PV-004','2024-03-31',3,0,0,0,121500000,610.0),
+('PV-001','2023-12-31',1,395000000,58000000,337000000,141500000,13.2),
+('PV-002','2023-12-31',4,0,0,0,91400000,540.0);
+
+INSERT INTO valuation_inputs VALUES
+('PV-001','2024-03-31',30000000,30000000,0.22,0.135,0,0.08),
+('PV-002','2024-03-31',0,0,0.00,0.155,575,0.03),
+('PV-003','2024-03-31',98000000,16000000,0.05,0.17,0,0.18),
+('PV-004','2024-03-31',0,0,0.00,0.145,610,0.02);
+
+INSERT INTO valuation_reviews VALUES
+('PV-001','2024-03-31','Valuation Committee',2,'Multiple expanded faster than public comps'),
+('PV-002','2024-03-31','Credit Committee',3,'Spread move supported by observable trades'),
+('PV-003','2024-03-31','Audit Liaison',1,'Need support for liquidity discount'),
+('PV-004','2024-03-31','BDC Controller',3,'Broker quote corroborated by secondary prints');`,
+    qanda:[
+      {q:'Which holdings had the largest quarter-over-quarter change in fair value?',
+       a:'Compare valuation_marks across quarter_end values by holding_id and rank absolute fair_value movement. The agent highlights the biggest movers and the method used.'},
+      {q:'Show all holdings under challenge by the valuation committee',
+       a:'Filter valuation_reviews where review_status = CHALLENGED. The agent lists challenged marks and the stated issue behind each challenge.'},
+      {q:'Which funds have the most Level 3 style valuation risk from DCF or modelled spread methods?',
+       a:'Group valuation_marks by valuation_method and fund_name, focusing on DCF and modelled spread marks. The agent can show where recurring judgement risk is concentrated.'},
+      {q:'What is the implied equity value bridge for Orchid Data from enterprise value to fund fair value?',
+       a:'Use valuation_marks and fund_holdings to bridge enterprise_value less net_debt to equity_value, then multiply by ownership_pct. The agent explains how the fund mark is derived.'},
+      {q:'How sensitive are the challenged marks to a 100 basis point increase in discount rate or spread?',
+       a:'Join valuation_reviews to valuation_inputs and identify DCF or credit marks with high discount_rate or market_spread_bps sensitivity. The agent can explain which positions would likely compress the most.'},
+      {q:'Which holdings have the largest liquidity discount applied?',
+       a:'Rank valuation_inputs by liquidity_discount_pct and join to fund_holdings. The agent surfaces where illiquidity is driving a material portion of the mark.'},
+      {q:'Compare PE, credit, hedge, and BDC valuation methods this quarter',
+       a:'Aggregate valuation_marks by fund_type and valuation_method through a join to fund_holdings. The agent shows how method mix differs by strategy.'},
+      {q:'Build the quarterly valuation committee pack with marks, inputs, and review flags',
+       a:'Combine holdings, marks, inputs, and review status into a single valuation dashboard. The agent can prepare the recurring quarter-end committee summary.'}
+    ]
+  },
+  {
+    id:'financial-reporting-valuation',
+    sector:'val',
+    sectorLabel:'Valuations',
+    title:'Financial Reporting Valuation Agent',
+    description:'Analyse goodwill impairment, long-lived asset impairment, stock-based compensation, and complex security valuation for financial reporting. ClickHouse lets AI agents connect reporting-unit cash flows, discount rates, grant assumptions, and derivative or contingent consideration marks so they can explain ASC 350, ASC 360, ASC 718, and fair value conclusions.',
+    schema:`-- Financial Reporting Valuation Schema
+CREATE TABLE reporting_units (
+    unit_id                String,
+    company_name           String,
+    reporting_unit         String,
+    carrying_value         Float64,
+    goodwill_balance       Float64,
+    long_lived_assets      Float64,
+    quarter_end            Date
+) ENGINE = MergeTree()
+ORDER BY (quarter_end, unit_id);
+
+CREATE TABLE impairment_tests (
+    unit_id                String,
+    test_type              Enum8('GOODWILL'=1,'LONG_LIVED'=2),
+    scenario_name          String,
+    fair_value             Float64,
+    undiscounted_cashflows Float64,
+    discount_rate          Float64,
+    headroom               Float64,
+    impairment_charge      Float64
+) ENGINE = MergeTree()
+ORDER BY (unit_id, test_type, scenario_name);
+
+CREATE TABLE sbc_grants (
+    grant_id               String,
+    grant_date             Date,
+    award_type             Enum8('OPTION'=1,'RSU'=2,'PSU'=3),
+    employee_group         String,
+    grant_count            UInt64,
+    strike_price           Float64,
+    fair_value_per_award   Float64,
+    expected_term_years    Float64,
+    volatility_pct         Float64
+) ENGINE = MergeTree()
+ORDER BY (grant_date, grant_id);
+
+CREATE TABLE complex_securities (
+    instrument_id          String,
+    instrument_type        Enum8('CONVERTIBLE'=1,'WARRANT'=2,'EARNOUT'=3,'DERIVATIVE'=4),
+    issuer_name            String,
+    measurement_date       Date,
+    notional_amount        Float64,
+    fair_value             Float64,
+    volatility_pct         Float64,
+    discount_rate          Float64,
+    scenario_probability   Float64
+) ENGINE = MergeTree()
+ORDER BY (measurement_date, instrument_id);`,
+    sampleData:`INSERT INTO reporting_units VALUES
+('FR-001','Apex Platforms','Digital Solutions',690000000,210000000,155000000,'2024-03-31'),
+('FR-002','Apex Platforms','Field Services',420000000,110000000,145000000,'2024-03-31'),
+('FR-003','Harbor Medical','Regional Clinics',315000000,82000000,124000000,'2024-03-31');
+
+INSERT INTO impairment_tests VALUES
+('FR-001',1,'Base Case',755000000,0,0.12,65000000,0),
+('FR-002',1,'Base Case',395000000,0,0.135,-25000000,25000000),
+('FR-003',2,'Recoverability',0,118000000,0.11,-6000000,18000000),
+('FR-003',1,'Step Zero Support',338000000,0,0.125,23000000,0);
+
+INSERT INTO sbc_grants VALUES
+('G-1001','2024-01-15',1,'Executive',240000,12.50,4.85,6.0,0.42),
+('G-1002','2024-02-01',2,'All Employees',680000,0.00,11.20,3.0,0.00),
+('G-1003','2024-03-10',3,'Sales Leadership',95000,0.00,9.40,2.8,0.36);
+
+INSERT INTO complex_securities VALUES
+('CS-001',1,'Nova Devices','2024-03-31',75000000,21800000,0.48,0.14,1.00),
+('CS-002',2,'Nova Devices','2024-03-31',18000000,6200000,0.52,0.15,1.00),
+('CS-003',3,'Orchid Data','2024-03-31',45000000,12800000,0.55,0.17,0.60),
+('CS-004',4,'Harbor Medical','2024-03-31',25000000,4700000,0.39,0.13,0.85);`,
+    qanda:[
+      {q:'Which reporting units have negative goodwill headroom this quarter?',
+       a:'Filter impairment_tests for test_type = GOODWILL and headroom < 0, then join to reporting_units. The agent can show where ASC 350 impairment is indicated.'},
+      {q:'Show long-lived assets that fail recoverability before discounting',
+       a:'Compare undiscounted_cashflows to long_lived_assets for test_type = LONG_LIVED. The agent identifies assets that may require ASC 360 write-downs.'},
+      {q:'Which stock-based grants have the highest fair value per award?',
+       a:'Order sbc_grants by fair_value_per_award and segment by award_type or employee_group. The agent explains the compensation accounting impact.'},
+      {q:'What is the total fair value of complex securities by instrument type?',
+       a:'Group complex_securities by instrument_type and sum fair_value. The agent provides the reporting mix across convertibles, warrants, earnouts, and derivatives.'},
+      {q:'How sensitive are the goodwill tests to a 100 basis point increase in discount rate?',
+       a:'Use the existing impairment_tests discount_rate and headroom as the starting point. The agent can identify units with low cushion that would be at risk under a higher WACC.'},
+      {q:'Which earnouts or warrants rely on the highest volatility assumptions?',
+       a:'Filter complex_securities by instrument_type and rank by volatility_pct. The agent highlights the instruments most exposed to assumption challenge.'},
+      {q:'What quarter-end impairment charges would we book under the current tests?',
+       a:'Sum impairment_charge from impairment_tests and break it down by company and test_type. The agent produces the accounting impact table.'},
+      {q:'Prepare a financial reporting valuation memo covering impairment, SBC, and complex security marks',
+       a:'Join the reporting_units, impairment_tests, sbc_grants, and complex_securities tables. The agent assembles a quarter-end valuation memo summary.'}
+    ]
+  },
+  {
+    id:'dispute-resolution-valuations',
+    sector:'val',
+    sectorLabel:'Valuations',
+    title:'Dispute Resolution & Litigation Valuation Agent',
+    description:'Analyse expert testimony assignments, damages models, shareholder disputes, and bankruptcy-related valuation issues. ClickHouse gives AI agents a litigation dataset to query so they can compare valuation positions, quantify damages scenarios, and explain where assumptions diverge between claimant and respondent experts.',
+    schema:`-- Dispute Resolution & Litigation Valuation Schema
+CREATE TABLE dispute_matters (
+    matter_id              String,
+    case_name              String,
+    dispute_type           Enum8('SHAREHOLDER'=1,'BANKRUPTCY'=2,'POST_MA'=3,'COMMERCIAL'=4),
+    venue                  String,
+    filing_date            Date,
+    stage                  Enum8('EXPERT_REPORT'=1,'DEPOSITION'=2,'TRIAL'=3,'SETTLED'=4),
+    claimed_amount         Float64
+) ENGINE = MergeTree()
+ORDER BY (filing_date, matter_id);
+
+CREATE TABLE valuation_positions (
+    matter_id              String,
+    expert_side            Enum8('CLAIMANT'=1,'RESPONDENT'=2,'COURT'=3),
+    methodology            Enum8('DCF'=1,'MARKET'=2,'LIQUIDATION'=3,'SOLVENCY'=4),
+    indicated_value        Float64,
+    discount_rate          Float64,
+    terminal_multiple      Float64,
+    valuation_date         Date
+) ENGINE = MergeTree()
+ORDER BY (matter_id, expert_side, methodology);
+
+CREATE TABLE damages_scenarios (
+    matter_id              String,
+    scenario_name          String,
+    damages_type           Enum8('LOST_PROFITS'=1,'DIMINUTION'=2,'FRAUDULENT_TRANSFER'=3,'APPRAISAL'=4),
+    probability_weight     Float64,
+    damages_amount         Float64,
+    prejudgment_interest   Float64
+) ENGINE = MergeTree()
+ORDER BY (matter_id, scenario_name);
+
+CREATE TABLE case_evidence (
+    matter_id              String,
+    evidence_type          String,
+    source_party           String,
+    reliability_score      Float64,
+    produced_date          Date,
+    key_issue              String
+) ENGINE = MergeTree()
+ORDER BY (matter_id, produced_date, evidence_type);`,
+    sampleData:`INSERT INTO dispute_matters VALUES
+('DR-001','Redwood v. Altair',1,'Delaware Chancery','2024-01-19',1,285000000),
+('DR-002','In re Harbor Components',2,'US Bankruptcy Court','2024-02-11',2,640000000),
+('DR-003','Summit v. Orion Sellers',3,'AAA Arbitration','2024-03-05',1,92000000);
+
+INSERT INTO valuation_positions VALUES
+('DR-001',1,1,312000000,0.145,11.5,'2024-03-31'),
+('DR-001',2,2,248000000,0.165,9.8,'2024-03-31'),
+('DR-002',1,4,710000000,0.135,0.0,'2024-03-31'),
+('DR-002',2,3,565000000,0.0,0.0,'2024-03-31'),
+('DR-003',1,1,118000000,0.155,10.2,'2024-03-31'),
+('DR-003',2,2,76000000,0.175,8.6,'2024-03-31');
+
+INSERT INTO damages_scenarios VALUES
+('DR-001','Management Standalone',4,0.50,54000000,4200000),
+('DR-001','Buyer Synergy Exclusion',4,0.50,31000000,2400000),
+('DR-002','Going Concern',3,0.60,95000000,6200000),
+('DR-002','Forced Sale',3,0.40,38000000,2100000),
+('DR-003','Lost Synergies',2,0.55,47000000,3100000),
+('DR-003','Working Capital True-Up',2,0.45,18000000,1200000);
+
+INSERT INTO case_evidence VALUES
+('DR-001','Board Deck','Company',0.86,'2024-02-20','Management projections changed after banker push'),
+('DR-001','Trading Comps File','Respondent',0.79,'2024-02-28','Peer set excludes higher-growth names'),
+('DR-002','Restructuring Model','Debtor',0.91,'2024-03-08','Liquidity runway depends on vendor support'),
+('DR-003','SPA Working Capital Schedule','Claimant',0.88,'2024-03-18','Target closing peg may have been understated');`,
+    qanda:[
+      {q:'Where is the gap between claimant and respondent valuation positions the largest?',
+       a:'Compare valuation_positions across expert_side by matter_id and methodology. The agent highlights the disputes with the widest spread in indicated value.'},
+      {q:'Which damages scenarios have the highest weighted expected value?',
+       a:'Multiply damages_amount by probability_weight and rank across matters. The agent shows where litigation exposure is most severe.'},
+      {q:'Show bankruptcy matters where solvency and liquidation views diverge materially',
+       a:'Filter dispute_matters for bankruptcy cases and compare valuation_positions using solvency versus liquidation methods. The agent explains the restructuring implications.'},
+      {q:'Which cases rely on lower-quality evidence for a key valuation assumption?',
+       a:'Rank case_evidence by reliability_score and join back to dispute_matters. The agent can flag assumptions likely to be attacked in deposition or trial.'},
+      {q:'What is the all-in claimed exposure including prejudgment interest?',
+       a:'Sum damages_amount plus prejudgment_interest across damages_scenarios by matter_id. The agent presents the gross exposure range by case.'},
+      {q:'How different are the discount rates used by claimant and respondent experts?',
+       a:'Compare discount_rate across expert_side and methodology within each matter. The agent surfaces where WACC assumptions are doing most of the work.'},
+      {q:'Which shareholder disputes appear closest to settlement based on valuation spread?',
+       a:'Look at cases where claimant and respondent indicated_value ranges are converging and stage is late. The agent identifies disputes where a negotiated midpoint may be realistic.'},
+      {q:'Prepare an expert witness briefing with valuation positions, damages, and evidence quality',
+       a:'Join the matter, valuation, damages, and evidence tables. The agent can produce a concise litigation valuation briefing for counsel.'}
+    ]
+  },
+  {
+    id:'real-assets-valuation',
+    sector:'val',
+    sectorLabel:'Valuations',
+    title:'Real Estate, Tangible Assets & Equipment Valuation Agent',
+    description:'Analyse appraisals of real estate, machinery, equipment, and other tangible assets for transactions, financial reporting, lending, and insurance. ClickHouse allows AI agents to query asset inventories, appraisal methods, utilisation, and replacement-cost benchmarks together so they can explain where physical asset values are moving.',
+    schema:`-- Real Assets Valuation Schema
+CREATE TABLE tangible_assets (
+    asset_id                String,
+    client_name             String,
+    asset_category          Enum8('REAL_ESTATE'=1,'MACHINERY'=2,'EQUIPMENT'=3,'FLEET'=4),
+    asset_description       String,
+    location                String,
+    acquisition_cost        Float64,
+    net_book_value          Float64,
+    in_service_date         Date
+) ENGINE = MergeTree()
+ORDER BY (client_name, asset_id);
+
+CREATE TABLE appraisals (
+    asset_id                String,
+    appraisal_date          Date,
+    purpose                 Enum8('TRANSACTION'=1,'FINANCIAL_REPORTING'=2,'INSURANCE'=3,'LENDING'=4),
+    method_used             Enum8('MARKET'=1,'COST'=2,'INCOME'=3),
+    orderly_liquidation_value Float64,
+    fair_market_value       Float64,
+    replacement_cost_new    Float64,
+    appraiser               String
+) ENGINE = MergeTree()
+ORDER BY (appraisal_date, asset_id);
+
+CREATE TABLE operating_metrics (
+    asset_id                String,
+    period_end              Date,
+    utilisation_pct         Float64,
+    maintenance_cost        Float64,
+    annual_revenue_support  Float64,
+    insurance_coverage      Float64
+) ENGINE = MergeTree()
+ORDER BY (period_end, asset_id);
+
+CREATE TABLE market_benchmarks (
+    benchmark_id            String,
+    asset_category          String,
+    region                  String,
+    price_index             Float64,
+    cap_rate                Float64,
+    recovery_pct            Float64,
+    observation_date        Date
+) ENGINE = MergeTree()
+ORDER BY (observation_date, benchmark_id);`,
+    sampleData:`INSERT INTO tangible_assets VALUES
+('RA-001','Falcon Logistics',1,'Regional Distribution Center','Dallas',142000000,118000000,'2018-05-01'),
+('RA-002','Falcon Logistics',2,'Automated Sortation Line','Dallas',28500000,17100000,'2020-09-15'),
+('RA-003','Northshore Energy',3,'Gas Compression Unit','Aberdeen',36000000,22400000,'2019-07-20'),
+('RA-004','BluePeak Foods',4,'Refrigerated Truck Fleet','Leeds',18800000,9900000,'2021-03-10');
+
+INSERT INTO appraisals VALUES
+('RA-001','2024-03-31',1,3,126000000,148000000,165000000,'Appraiser One'),
+('RA-002','2024-03-31',2,2,14200000,19800000,26400000,'Appraiser Two'),
+('RA-003','2024-03-31',3,2,17600000,24600000,34200000,'Appraiser Three'),
+('RA-004','2024-03-31',4,1,8200000,11400000,15100000,'Appraiser Four');
+
+INSERT INTO operating_metrics VALUES
+('RA-001','2024-03-31',0.94,1800000,24500000,155000000),
+('RA-002','2024-03-31',0.81,2400000,9600000,21000000),
+('RA-003','2024-03-31',0.68,3100000,12400000,29000000),
+('RA-004','2024-03-31',0.88,1500000,7300000,12000000);
+
+INSERT INTO market_benchmarks VALUES
+('MB-001','REAL_ESTATE','US South',1.08,0.067,0.82,'2024-03-31'),
+('MB-002','MACHINERY','US South',1.03,0.000,0.71,'2024-03-31'),
+('MB-003','EQUIPMENT','UK North Sea',0.97,0.000,0.68,'2024-03-31'),
+('MB-004','FLEET','UK',1.01,0.000,0.63,'2024-03-31');`,
+    qanda:[
+      {q:'Which assets have the biggest gap between net book value and fair market value?',
+       a:'Join tangible_assets to appraisals and rank the difference between net_book_value and fair_market_value. The agent highlights assets where carrying value and appraised value diverge most.'},
+      {q:'Show the relationship between utilisation and appraised value for equipment assets',
+       a:'Join operating_metrics to appraisals and compare utilisation_pct with fair_market_value or orderly_liquidation_value. The agent can explain whether lower usage is dragging value.'},
+      {q:'Which assets appear underinsured relative to replacement cost new?',
+       a:'Compare insurance_coverage from operating_metrics against replacement_cost_new in appraisals. The agent identifies tangible assets with thin insurance protection.'},
+      {q:'How do liquidation values compare with fair market value by asset category?',
+       a:'Group appraisals by asset category through a join to tangible_assets and compare orderly_liquidation_value to fair_market_value. The agent shows forced-sale discount severity by class.'},
+      {q:'What if market recovery rates fell 10 percentage points for machinery and equipment?',
+       a:'Use market_benchmarks recovery_pct as the base and assess which machinery or equipment values are most exposed. The agent can estimate downside pressure on liquidation values.'},
+      {q:'Which locations have the strongest real estate support from market benchmarks?',
+       a:'Join real estate assets to market_benchmarks on region or category and compare cap_rate and price_index trends. The agent highlights locations with stronger property valuation support.'},
+      {q:'Build a tangible asset valuation summary for transaction, reporting, lending, and insurance purposes',
+       a:'Combine the asset inventory, appraisal outputs, operating metrics, and market benchmarks. The agent prepares a cross-purpose asset valuation dashboard.'},
+      {q:'Which machinery assets have high maintenance cost but weak utilisation?',
+       a:'Filter operating_metrics for high maintenance_cost and low utilisation_pct, then join to tangible_assets. The agent shows where physical asset value may deteriorate further without action.'}
+    ]
   }
 ];
 
@@ -5388,7 +5953,19 @@ const systemPrompts = {
 
   'ma-screening': `You are an M&A target screening specialist for corporate development. Your role is to evaluate strategic fit, valuation, and synergy potential across candidate targets. Always retrieve the relevant data and present it as a formatted markdown table, then explain target prioritisation, valuation context, and strategic rationale.`,
 
-  'fx-hedging': `You are an FX risk management specialist for corporate treasury. Your role is to evaluate currency exposures, hedging effectiveness, and policy compliance. Always retrieve the relevant data and present it as a formatted markdown table, then explain residual risk, hedge economics, and strategy recommendations.`
+  'fx-hedging': `You are an FX risk management specialist for corporate treasury. Your role is to evaluate currency exposures, hedging effectiveness, and policy compliance. Always retrieve the relevant data and present it as a formatted markdown table, then explain residual risk, hedge economics, and strategy recommendations.`,
+
+  'transaction-opinions': `You are a transaction opinions specialist. Your role is to evaluate fairness opinions, solvency opinions, and capital adequacy analyses for boards, sponsors, and financing parties. Always retrieve the relevant data and present it as a formatted markdown table, then explain valuation support, downside risk, and any conclusion that may be difficult to defend.`,
+
+  'transaction-advisory-valuations': `You are a transaction advisory valuation specialist. Your role is to analyse purchase price allocations, carve-out valuations, and tax-driven valuation workstreams such as 409A, transfer pricing, and estate or gift matters. Always retrieve the relevant data and present it as a formatted markdown table, then explain allocation logic, assumption sensitivity, and execution status.`,
+
+  'portfolio-valuation-fund-advisory': `You are a portfolio valuation and fund advisory specialist. Your role is to evaluate recurring fair value marks for illiquid holdings across PE, credit, hedge, and BDC portfolios. Always retrieve the relevant data and present it as a formatted markdown table, then explain mark movements, assumption risk, and review items requiring committee attention.`,
+
+  'financial-reporting-valuation': `You are a financial reporting valuation specialist. Your role is to analyse impairment testing, stock-based compensation valuation, and complex security marks for accounting and audit purposes. Always retrieve the relevant data and present it as a formatted markdown table, then explain accounting implications, judgement areas, and quarter-end risks.`,
+
+  'dispute-resolution-valuations': `You are a dispute resolution and litigation valuation specialist. Your role is to compare expert positions, quantify damages, and assess evidence quality across valuation disputes, shareholder actions, and bankruptcy matters. Always retrieve the relevant data and present it as a formatted markdown table, then explain the differences in assumptions, exposure, and likely pressure points for testimony or settlement.`,
+
+  'real-assets-valuation': `You are a real estate, tangible assets, and machinery valuation specialist. Your role is to assess appraised values, insurance support, liquidation downside, and benchmark alignment for physical assets. Always retrieve the relevant data and present it as a formatted markdown table, then explain value drivers, asset-level risk, and where appraisal support looks thin.`
 };
 
 const generatedSampleData = {
@@ -6165,7 +6742,19 @@ const longDescriptions = {
 
   'pricing-profitability': `Evaluate premium adequacy, attritional loss ratios, and rate change effectiveness across the insurance portfolio to identify segments requiring urgent pricing intervention. ClickHouse stores individual policy and claims records, enabling AI agents to compute loss ratios at granular peril, region, and risk characteristic level — benchmarking renewal pricing against emerging loss experience. Agents model the underwriting impact of rate changes, surface adverse selection trends in new business, and support the pricing actuarial team with rapid segmentation analysis to defend the combined ratio.`,
 
-  'catastrophe-exposure': `Assess aggregated insured exposure across natural peril zones, evaluate reinsurance programme adequacy, and model net retained loss under stress scenarios in real time. ClickHouse stores location-level policy data linked to peril zone classifications, enabling AI agents to compute gross and net probable maximum loss by peril, identify regions approaching internal risk appetite limits, and stress test reinsurance structures against modelled loss scenarios. Agents identify gaps between gross exposure growth and programme limit development, surface underwriting decisions that have concentrated risk, and support catastrophe committee reporting with current-position aggregation analytics.`
+  'catastrophe-exposure': `Assess aggregated insured exposure across natural peril zones, evaluate reinsurance programme adequacy, and model net retained loss under stress scenarios in real time. ClickHouse stores location-level policy data linked to peril zone classifications, enabling AI agents to compute gross and net probable maximum loss by peril, identify regions approaching internal risk appetite limits, and stress test reinsurance structures against modelled loss scenarios. Agents identify gaps between gross exposure growth and programme limit development, surface underwriting decisions that have concentrated risk, and support catastrophe committee reporting with current-position aggregation analytics.`,
+
+  'transaction-opinions': `Support boards and deal committees with fairness opinions, solvency opinions, and capital adequacy assessments tied directly to live valuation evidence. ClickHouse connects transaction value, methodology ranges, downside solvency cases, and post-deal capital buffers so AI agents can explain whether an opinion is comfortably supported or resting on fragile assumptions. Agents compare consideration against valuation ranges, identify leverage cases that slip toward failure, and translate opinion work into a concise board-ready view of valuation, liquidity, and downside protection.`,
+
+  'transaction-advisory-valuations': `Coordinate the valuation work that surrounds a live deal, from purchase price allocations under ASC 805 or IFRS 3 to carve-out and tax-driven analyses such as 409A, transfer pricing, and estate or gift valuations. ClickHouse ties purchase price, identified intangible asset values, stand-alone carve-out economics, and tax-valuation case status together so AI agents can quantify allocation outcomes, challenge assumptions, and show where execution risk still sits. Agents explain goodwill build, amortisation consequences, stand-alone margin normalisation, and which tax workstreams remain unresolved before close or audit.`,
+
+  'portfolio-valuation-fund-advisory': `Run recurring quarter-end fair value oversight across illiquid holdings for PE funds, credit funds, hedge funds, and BDCs. ClickHouse stores historical marks, supporting inputs, review commentary, and method selections so AI agents can compare quarter-over-quarter moves, isolate which marks depend most on judgement, and surface committee challenges before reporting packages go out. Agents identify where Level 3 exposure is concentrated, where discount rates or spreads look stretched, and which assets warrant deeper valuation committee attention.`,
+
+  'financial-reporting-valuation': `Support quarter-end and year-end reporting for goodwill impairment, long-lived asset recoverability, stock-based compensation, and complex securities such as convertibles, warrants, earnouts, and derivatives. ClickHouse gives AI agents direct access to carrying values, fair value tests, grant assumptions, and instrument marks so they can explain accounting consequences and identify where headroom is thin. Agents turn valuation models into reporting insight by showing which units are at risk of impairment, which grants drive compensation expense, and which complex securities are most sensitive to volatility or discount rate assumptions.`,
+
+  'dispute-resolution-valuations': `Analyse valuation disputes the way a litigation team would: comparing expert reports, damages scenarios, and evidence quality across shareholder actions, post-M&A disputes, commercial damages claims, and bankruptcy matters. ClickHouse centralises the competing valuation positions and scenario analyses so AI agents can show exactly where claimant and respondent assumptions diverge and how those differences translate into exposure. Agents quantify weighted damages, identify weak evidentiary support, and prepare concise expert-witness or settlement briefings anchored in the underlying numbers.`,
+
+  'real-assets-valuation': `Track the valuation of real estate, tangible assets, machinery, equipment, and fleet portfolios across transaction, lending, reporting, and insurance contexts. ClickHouse links asset inventories, appraisals, utilisation metrics, and market benchmarks so AI agents can explain where physical asset values are rising, where liquidation discounts are severe, and where insurance support lags replacement cost. Agents turn appraisal data into operational insight by identifying underinsured assets, maintenance-heavy equipment with weakening utilisation, and locations or categories where market support is deteriorating.`
 };
 
 function simplifyChType(t) {
@@ -6235,7 +6824,7 @@ function renderGrid() {
   const filtered = currentFilter === 'all' ? scenarios : scenarios.filter(s => s.sector === currentFilter);
 
   const sectors = [...new Set(filtered.map(s => s.sector))];
-  const sectorOrder = ['cm','rb','cb','pay','comp','wm','am','ins','tax','pe','acc','cry','cf'];
+  const sectorOrder = ['cm','rb','cb','pay','comp','wm','am','ins','tax','pe','acc','cry','cf','val'];
   const sectorNames = {
     cm:'Capital Markets',
     rb:'Retail Banking',
@@ -6249,7 +6838,8 @@ function renderGrid() {
     pe:'Private Equity',
     acc:'Accounting',
     cry:'Crypto',
-    cf:'Corporate Finance'
+    cf:'Corporate Finance',
+    val:'Valuations'
   };
 
   container.innerHTML = sectorOrder
