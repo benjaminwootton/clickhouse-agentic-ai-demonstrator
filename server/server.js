@@ -18,8 +18,13 @@ for (const p of INDUSTRY_PATHS) {
   });
 }
 
+const fireworksApiKey = process.env.FIREWORKS_API_KEY;
+if (!fireworksApiKey) {
+  throw new Error('Missing FIREWORKS_API_KEY. Set it in .env and pass it into the container runtime.');
+}
+
 const client = new OpenAI({
-  apiKey: process.env.FIREWORKS_API_KEY,
+  apiKey: fireworksApiKey,
   baseURL: process.env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1'
 });
 const MODEL = process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/deepseek-v4-pro';
