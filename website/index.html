@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClickHouse In Financial Services Agentic AI Demonstrator</title>
+<title>ClickHouse Agentic AI Demonstrator</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -28,12 +28,29 @@ nav{background:#0d1220;border-bottom:1px solid #1e2d47;padding:0 2rem;display:fl
 .hero-byline a:hover{text-decoration:underline}
 .hero-quant{display:flex;justify-content:center;gap:2rem;margin-bottom:1rem;flex-wrap:wrap}
 .hero-quant-item{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:#334155;letter-spacing:.04em;padding:.25rem .6rem;border:1px solid #1e2d47;border-radius:4px;background:#0d1220}
+.industry-switch{display:flex;justify-content:center;gap:.5rem;margin-top:1.2rem;flex-wrap:wrap}
+.industry-switch-item{padding:.45rem 1.1rem;font-size:.78rem;font-weight:600;border:1px solid #1e2d47;border-radius:8px;color:#94a3b8;background:transparent;transition:all .2s;cursor:pointer;text-decoration:none}
+.industry-switch-item:hover{color:#e2e8f0;border-color:#334155}
+.industry-switch-item.active{background:#1a2740;border-color:#2563eb;color:#60a5fa}
+body.light .industry-switch-item{border-color:#e2e8f0;color:#475569}
+body.light .industry-switch-item:hover{color:#0f172a;border-color:#cbd5e1}
+body.light .industry-switch-item.active{background:#eff6ff;border-color:#2563eb;color:#1d4ed8}
 
 /* SECTOR TABS */
-.tabs{display:flex;justify-content:center;gap:.5rem;margin-bottom:2.5rem;padding:0 1rem;flex-wrap:wrap}
-.tab{padding:.5rem 1.2rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:1px solid #1e2d47;color:#64748b;background:transparent;transition:all .2s}
+.tabs{display:flex;justify-content:center;align-items:center;gap:.5rem;margin-bottom:2.5rem;padding:0 1rem;flex-wrap:wrap;position:relative}
+.tab{padding:.5rem 1.2rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:1px solid #1e2d47;color:#64748b;background:transparent;transition:all .2s;display:inline-flex;align-items:center;gap:.5rem}
 .tab:hover{color:#e2e8f0;border-color:#334155}
 .tab.active{background:#1a2740;border-color:#2563eb;color:#60a5fa}
+.industry-dropdown{position:relative;display:inline-block}
+.industry-trigger .chev{width:10px;height:10px;transition:transform .2s;opacity:.7}
+.industry-trigger.open .chev{transform:rotate(180deg)}
+.industry-menu{position:absolute;top:calc(100% + .5rem);left:50%;transform:translateX(-50%);background:#0d1220;border:1px solid #1e2d47;border-radius:10px;padding:.4rem;min-width:260px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:100;display:none;max-height:60vh;overflow-y:auto}
+.industry-menu.open{display:block}
+.industry-item{display:flex;align-items:center;justify-content:space-between;padding:.55rem .8rem;border-radius:6px;font-size:.82rem;color:#94a3b8;cursor:pointer;gap:1rem;white-space:nowrap}
+.industry-item:hover{background:#1a2740;color:#e2e8f0}
+.industry-item.active{background:#1a2740;color:#60a5fa}
+.industry-item .count{font-size:.7rem;color:#475569;font-family:'JetBrains Mono',monospace}
+.industry-item.active .count{color:#60a5fa;opacity:.7}
 
 /* GRID */
 .grid-wrap{max-width:1600px;margin:0 auto;padding:0 2rem 2.5rem}
@@ -45,6 +62,8 @@ nav{background:#0d1220;border-bottom:1px solid #1e2d47;padding:0 2rem;display:fl
 .card:hover::before{opacity:1}
 .card-sector{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.6rem}
 .cm{color:#f59e0b}.rb{color:#10b981}.cb{color:#06b6d4}.pay{color:#f43f5e}.comp{color:#f97316}.wm{color:#22c55e}.am{color:#8b5cf6}.ins{color:#ef4444}.tax{color:#84cc16}.pe{color:#ec4899}.acc{color:#14b8a6}.cry{color:#eab308}.cf{color:#0ea5e9}.val{color:#818cf8}
+.sb{color:#22c55e}.cas{color:#a855f7}.pl{color:#0ea5e9}.rg{color:#ef4444}.af{color:#f59e0b}
+.cp{color:#f59e0b}.qs{color:#06b6d4}.pm{color:#22c55e}.pro{color:#a855f7}.hse{color:#ef4444}
 .card h3{font-size:1.05rem;font-weight:600;margin-bottom:.6rem;color:#e2e8f0}
 .card p{font-size:.85rem;color:#64748b;line-height:1.65}
 .card-arrow{position:absolute;top:1.2rem;right:1.2rem;color:#334155;font-size:1rem;transition:all .2s}
@@ -259,6 +278,12 @@ body.light .hero-badge{background:#eff6ff;border-color:#bfdbfe;color:#2563eb}
 body.light .tab{border-color:#e2e8f0;color:#64748b;background:transparent}
 body.light .tab:hover{color:#0f172a;border-color:#cbd5e1}
 body.light .tab.active{background:#eff6ff;border-color:#2563eb;color:#1d4ed8}
+body.light .industry-menu{background:#ffffff;border-color:#e2e8f0;box-shadow:0 12px 40px rgba(15,23,42,.12)}
+body.light .industry-item{color:#475569}
+body.light .industry-item:hover{background:#f1f5f9;color:#0f172a}
+body.light .industry-item.active{background:#eff6ff;color:#1d4ed8}
+body.light .industry-item .count{color:#94a3b8}
+body.light .industry-item.active .count{color:#1d4ed8}
 body.light .sector-label{color:#64748b;border-bottom-color:#e2e8f0}
 body.light .card{background:#ffffff;border-color:#e2e8f0}
 body.light .card:hover{border-color:#2563eb;box-shadow:0 8px 30px rgba(37,99,235,.12)}
@@ -367,27 +392,25 @@ body.light .left-toggle:hover,body.light .left-restore:hover{color:#0f172a;borde
 <div id="home-page">
   <div class="hero">
 
-    <h1>ClickHouse In Financial Services<br><span>Agentic AI Demonstrator</span></h1>
-    <p>Explore how AI agents analyse and query ClickHouse datasets across capital markets, retail banking, commercial banking, payments, compliance, wealth management, asset management, insurance, corporate finance, and valuation advisory — with example schemas, synthetic data, and sample Q&amp;A.</p>
+    <h1 id="hero-title">ClickHouse In Financial Services<br><span>Agentic AI Demonstrator</span></h1>
+    <p id="hero-desc">Explore how AI agents analyse and query ClickHouse datasets across capital markets, retail banking, commercial banking, payments, compliance, wealth management, asset management, insurance, corporate finance, and valuation advisory — with example schemas, synthetic data, and sample Q&amp;A.</p>
     <div class="hero-byline">By <a href="https://benjaminwootton.com" target="_blank">@benjaminwootton</a></div>
+    <div class="industry-switch" id="industry-switch">
+      <a href="/fs" class="industry-switch-item" data-industry="fs" onclick="navigateIndustry(event,'fs')">Financial Services</a>
+      <a href="/igaming" class="industry-switch-item" data-industry="igaming" onclick="navigateIndustry(event,'igaming')">iGaming</a>
+      <a href="/construction" class="industry-switch-item" data-industry="construction" onclick="navigateIndustry(event,'construction')">Construction</a>
+    </div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" onclick="filterSector('all',this)">All Scenarios</div>
-    <div class="tab" onclick="filterSector('cm',this)">Capital Markets</div>
-    <div class="tab" onclick="filterSector('rb',this)">Retail Banking</div>
-    <div class="tab" onclick="filterSector('cb',this)">Commercial Banking</div>
-    <div class="tab" onclick="filterSector('pay',this)">Payments &amp; Fintech</div>
-    <div class="tab" onclick="filterSector('comp',this)">Compliance</div>
-    <div class="tab" onclick="filterSector('wm',this)">Wealth Management</div>
-    <div class="tab" onclick="filterSector('am',this)">Asset Management</div>
-    <div class="tab" onclick="filterSector('ins',this)">Insurance</div>
-    <div class="tab" onclick="filterSector('tax',this)">Tax</div>
-    <div class="tab" onclick="filterSector('pe',this)">Private Equity</div>
-    <div class="tab" onclick="filterSector('acc',this)">Accounting</div>
-    <div class="tab" onclick="filterSector('cry',this)">Crypto</div>
-    <div class="tab" onclick="filterSector('cf',this)">Corporate Finance</div>
-    <div class="tab" onclick="filterSector('val',this)">Valuations</div>
+  <div class="tabs" id="filter-bar">
+    <div class="tab active" id="filter-all" onclick="setIndustryFilter('all')">All Scenarios</div>
+    <div class="industry-dropdown" id="industry-dropdown">
+      <div class="tab industry-trigger" id="industry-trigger" onclick="toggleIndustryMenu(event)">
+        <span id="industry-trigger-label">Filter by sector</span>
+        <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg>
+      </div>
+      <div class="industry-menu" id="industry-menu"></div>
+    </div>
   </div>
 
   <div class="grid-wrap" id="grid-container"></div>
@@ -397,7 +420,7 @@ body.light .left-toggle:hover,body.light .left-restore:hover{color:#0f172a;borde
 <div id="detail-page" class="hidden"></div>
 <div id="deploy-modal-root"></div>
 
-<footer>ClickHouse In Financial Services Agentic AI Demonstrator &nbsp;·&nbsp; Built for client demonstrations</footer>
+<footer>ClickHouse Agentic AI Demonstrator &nbsp;·&nbsp; Built for client demonstrations</footer>
 
 <script>
 const scenarios = [
@@ -5821,6 +5844,1719 @@ INSERT INTO market_benchmarks VALUES
       {q:'Which machinery assets have high maintenance cost but weak utilisation?',
        a:'Filter operating_metrics for high maintenance_cost and low utilisation_pct, then join to tangible_assets. The agent shows where physical asset value may deteriorate further without action.'}
     ]
+  },
+
+  // ─── iGAMING ───────────────────────────────────────────────────────────────
+  {
+    id:'sportsbook-liability',
+    sector:'sb',
+    sectorLabel:'Sportsbook & Trading',
+    title:'Sportsbook Liability Agent',
+    description:'Monitor real-time book exposure across markets, events, and selections to understand where the sportsbook is most at risk and which outcomes would generate the largest losses. ClickHouse aggregates billions of bet legs and price ticks, enabling AI agents to investigate liability concentrations and recommend trading actions.',
+    schema:`-- Sportsbook Liability Schema
+CREATE TABLE bets (
+    bet_id          UInt64,
+    customer_id     UInt64,
+    event_id        String,
+    market_id       String,
+    selection_id    String,
+    stake           Decimal(12,2),
+    price_decimal   Decimal(8,3),
+    potential_payout Decimal(12,2),
+    currency        FixedString(3),
+    channel         Enum8('WEB'=1,'MOBILE'=2,'RETAIL'=3),
+    placed_at       DateTime64(3),
+    status          Enum8('OPEN'=1,'SETTLED_WIN'=2,'SETTLED_LOSE'=3,'VOID'=4,'CASHOUT'=5)
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(placed_at)
+ORDER BY (placed_at, event_id, market_id);
+
+CREATE TABLE events (
+    event_id        String,
+    sport           LowCardinality(String),
+    competition     LowCardinality(String),
+    home_team       String,
+    away_team       String,
+    start_time      DateTime,
+    status          Enum8('SCHEDULED'=1,'LIVE'=2,'FINISHED'=3,'CANCELLED'=4)
+) ENGINE = ReplacingMergeTree()
+ORDER BY event_id;
+
+CREATE TABLE markets (
+    market_id       String,
+    event_id        String,
+    market_type     LowCardinality(String),
+    selection_id    String,
+    selection_name  String,
+    current_price   Decimal(8,3),
+    overround       Decimal(6,4)
+) ENGINE = ReplacingMergeTree()
+ORDER BY (market_id, selection_id);
+
+CREATE TABLE liability_snapshots (
+    snapshot_time   DateTime64(3),
+    event_id        String,
+    market_id       String,
+    selection_id    String,
+    total_stake     Decimal(14,2),
+    max_payout      Decimal(14,2),
+    net_liability   Decimal(14,2)
+) ENGINE = MergeTree()
+ORDER BY (snapshot_time, event_id, market_id);`,
+    sampleData:`-- Events
+INSERT INTO events VALUES
+('EVT-001','Football','Premier League','Arsenal','Chelsea','2024-04-20 16:30:00',1),
+('EVT-002','Football','Premier League','Liverpool','Man City','2024-04-21 17:30:00',1),
+('EVT-003','Tennis','ATP Masters','Alcaraz','Sinner','2024-04-20 14:00:00',2);
+
+-- Markets
+INSERT INTO markets VALUES
+('MKT-001-MW','EVT-001','Match Winner','SEL-ARS','Arsenal',2.10,1.0512),
+('MKT-001-MW','EVT-001','Match Winner','SEL-CHE','Chelsea',3.40,1.0512),
+('MKT-001-MW','EVT-001','Match Winner','SEL-DRAW','Draw',3.60,1.0512),
+('MKT-002-MW','EVT-002','Match Winner','SEL-LIV','Liverpool',2.50,1.0488),
+('MKT-002-MW','EVT-002','Match Winner','SEL-MCI','Man City',2.80,1.0488);
+
+-- Bets
+INSERT INTO bets VALUES
+(900001,77001,'EVT-001','MKT-001-MW','SEL-ARS',500.00,2.10,1050.00,'GBP',2,'2024-04-19 21:00:00.000',1),
+(900002,77002,'EVT-001','MKT-001-MW','SEL-ARS',2500.00,2.10,5250.00,'GBP',1,'2024-04-19 22:15:00.000',1),
+(900003,77003,'EVT-001','MKT-001-MW','SEL-CHE',150.00,3.40,510.00,'GBP',2,'2024-04-20 09:00:00.000',1),
+(900004,77004,'EVT-002','MKT-002-MW','SEL-LIV',8000.00,2.50,20000.00,'GBP',1,'2024-04-20 11:42:00.000',1),
+(900005,77005,'EVT-003','MKT-003-MW','SEL-ALC',300.00,1.85,555.00,'EUR',2,'2024-04-20 13:30:00.000',1);
+
+-- Liability snapshots
+INSERT INTO liability_snapshots VALUES
+('2024-04-20 12:00:00.000','EVT-001','MKT-001-MW','SEL-ARS',45000.00,94500.00,-71200.00),
+('2024-04-20 12:00:00.000','EVT-001','MKT-001-MW','SEL-CHE',12000.00,40800.00,18400.00),
+('2024-04-20 12:00:00.000','EVT-002','MKT-002-MW','SEL-LIV',62000.00,155000.00,-118300.00);`,
+    qanda:[
+      {q:'Which events carry the largest net liability right now?',
+       a:'Query liability_snapshots filtered to the latest snapshot_time per event_id, then sum net_liability and rank descending. The agent can join to events to surface human-readable matchups along with the worst-case payout exposure.'},
+      {q:'Show me the top ten selections where we have the heaviest one-sided book',
+       a:'Aggregate bets by event_id, market_id, selection_id summing potential_payout minus total stake, and compare against the rival selections in the same market. The agent highlights where customer money is heavily concentrated on a single outcome.'},
+      {q:'Which sports and competitions are driving the most overall liability this weekend?',
+       a:'Join liability_snapshots to events on event_id and group by sport and competition, summing max_payout across upcoming start_time windows. The agent can pinpoint whether Premier League, NFL or tennis is dominating book risk.'},
+      {q:'Identify large stakes placed in the last hour that materially shifted liability',
+       a:'Filter bets where placed_at >= now() - INTERVAL 1 HOUR and stake exceeds a configured percentile, then compute the delta between pre- and post-bet liability_snapshots for the same selection_id. The agent flags moves needing trader attention.'},
+      {q:'What if Arsenal beat Chelsea — how much would we pay out?',
+       a:'Sum potential_payout from bets where selection_id = \'SEL-ARS\' and status = \'OPEN\', minus the stake retained from losing selections in the same market. The agent shows realised P&L by outcome scenario for any selected market.'},
+      {q:'Which markets are showing overround compression that may indicate sharp action?',
+       a:'Query markets.overround over time and identify selections where current_price has moved significantly while overround narrowed. The agent correlates this with recent bet volume on those selections to flag potential informed money.'},
+      {q:'What is our liability concentration by channel — retail versus mobile?',
+       a:'Group open bets by channel and sum potential_payout net of stake, broken down by event. The agent shows whether risk is being driven by retail walk-ins or digital customers, informing channel-specific limit policies.'},
+      {q:'Simulate the impact of cutting prices on Liverpool by ten percent — how would liability change?',
+       a:'Project new prices through markets, re-estimate inflow elasticity from historical price/stake response, and recompute potential liability_snapshots. The agent presents the expected change in net_liability and overround, supporting a trader pricing decision.'}
+    ]
+  },
+  {
+    id:'sharp-square-detection',
+    sector:'sb',
+    sectorLabel:'Sportsbook & Trading',
+    title:'Sharp vs Square Bettor Agent',
+    description:'Distinguish professional, line-moving bettors from recreational customers by analysing bet timing, price-taking behaviour, and long-run profitability. ClickHouse stores every bet leg and price tick, enabling AI agents to surface customers whose action consistently anticipates market moves.',
+    schema:`-- Sharp/Square Detection Schema
+CREATE TABLE customer_bets (
+    bet_id          UInt64,
+    customer_id     UInt64,
+    event_id        String,
+    market_id       String,
+    selection_id    String,
+    stake           Decimal(12,2),
+    price_taken     Decimal(8,3),
+    closing_price   Nullable(Decimal(8,3)),
+    placed_at       DateTime64(3),
+    settled_at      Nullable(DateTime64(3)),
+    profit          Nullable(Decimal(12,2))
+) ENGINE = MergeTree()
+ORDER BY (placed_at, customer_id);
+
+CREATE TABLE price_history (
+    market_id       String,
+    selection_id    String,
+    price           Decimal(8,3),
+    tick_time       DateTime64(3)
+) ENGINE = MergeTree()
+ORDER BY (tick_time, market_id, selection_id);
+
+CREATE TABLE customer_classification (
+    customer_id     UInt64,
+    classification  Enum8('SHARP'=1,'SQUARE'=2,'UNKNOWN'=3,'ARBER'=4),
+    clv_bp          Decimal(8,2),
+    win_rate        Decimal(6,4),
+    avg_stake       Decimal(12,2),
+    last_reviewed   Date,
+    limit_tier      Enum8('FULL'=1,'REDUCED'=2,'RESTRICTED'=3,'BLOCKED'=4)
+) ENGINE = ReplacingMergeTree(last_reviewed)
+ORDER BY customer_id;`,
+    sampleData:`-- Customer bets with closing line value
+INSERT INTO customer_bets VALUES
+(800001,55001,'EVT-101','MKT-101-MW','SEL-A',1500.00,2.30,2.05,'2024-04-18 10:14:00.000','2024-04-18 22:00:00.000',1950.00),
+(800002,55001,'EVT-102','MKT-102-MW','SEL-B',2000.00,1.95,1.82,'2024-04-18 11:00:00.000','2024-04-18 22:30:00.000',-2000.00),
+(800003,55002,'EVT-101','MKT-101-MW','SEL-A',50.00,2.10,2.05,'2024-04-18 18:30:00.000','2024-04-18 22:00:00.000',55.00),
+(800004,55003,'EVT-103','MKT-103-MW','SEL-C',3500.00,3.80,3.10,'2024-04-18 09:01:00.000','2024-04-18 23:00:00.000',9800.00);
+
+-- Price history showing line movement
+INSERT INTO price_history VALUES
+('MKT-101-MW','SEL-A',2.30,'2024-04-18 10:13:55.000'),
+('MKT-101-MW','SEL-A',2.20,'2024-04-18 10:20:00.000'),
+('MKT-101-MW','SEL-A',2.10,'2024-04-18 12:00:00.000'),
+('MKT-101-MW','SEL-A',2.05,'2024-04-18 19:00:00.000');
+
+-- Classifications
+INSERT INTO customer_classification VALUES
+(55001,1,420.50,0.5800,1750.00,'2024-04-15',2),
+(55002,2,-180.00,0.4400,42.00,'2024-04-15',1),
+(55003,1,612.30,0.6100,3000.00,'2024-04-15',3);`,
+    qanda:[
+      {q:'Which customers consistently beat the closing line by the largest margin?',
+       a:'Compute closing line value as (price_taken / closing_price - 1) per bet in customer_bets, aggregate by customer_id, and rank by average CLV in basis points. The agent surfaces sustained sharp behaviour rather than one-off lucky bets.'},
+      {q:'Show customers whose bets routinely cause significant line movement within five minutes',
+       a:'Join customer_bets to price_history on market_id and selection_id, comparing prices in the five-minute window before and after placed_at. The agent ranks customers by average post-bet price drop and stake-weighted impact.'},
+      {q:'Identify bettors that are arbing between us and other operators',
+       a:'Look for customers in customer_bets with very high turnover, low variance in returns, and patterns of taking top-of-market prices that move quickly. Cross-reference with customer_classification.classification = \'ARBER\' to confirm or extend the list.'},
+      {q:'Which customers placed bets within seconds of a price change in their favour?',
+       a:'Join price_history ticks to customer_bets where placed_at falls within a few seconds of a favourable price move on the same selection_id. The agent quantifies how often each customer captures stale or mis-priced lines.'},
+      {q:'Compare profitability of customers flagged SHARP versus SQUARE over the last 90 days',
+       a:'Group customer_bets by customer_classification.classification and sum profit, turnover, and bet count. The agent shows the cost to the book of sharp action versus the contribution from recreational customers.'},
+      {q:'What if we cut sharp customer limits by 50 percent — how much CLV would we save?',
+       a:'Replay historical bets at half the stake for customers where classification = \'SHARP\', recompute CLV in monetary terms, and project the annualised saving. The agent can also estimate handle loss and customer attrition probability.'},
+      {q:'Find customers showing sharp behaviour who are still on full limits',
+       a:'Filter customer_classification for classification = \'SHARP\' AND limit_tier = \'FULL\' and rank by clv_bp. This gives the trading team an immediate review list of likely under-managed accounts.'},
+      {q:'Are sharp customers concentrating on a specific competition or market type?',
+       a:'Join customer_bets to events and markets, filter to customers classified SHARP, and group by sport, competition, and market_type. The agent highlights niches where the book is being picked off most aggressively.'}
+    ]
+  },
+  {
+    id:'casino-game-performance',
+    sector:'cas',
+    sectorLabel:'Casino & Games',
+    title:'Casino Game Performance Agent',
+    description:'Track GGR, NGR, RTP, and hold percentage across every game, provider, and player segment to understand which titles are driving the casino floor and which are underperforming. ClickHouse aggregates billions of spin events, enabling AI agents to investigate game economics and content strategy.',
+    schema:`-- Casino Game Performance Schema
+CREATE TABLE game_rounds (
+    round_id        UInt64,
+    customer_id     UInt64,
+    game_id         String,
+    provider        LowCardinality(String),
+    bet_amount      Decimal(12,2),
+    win_amount      Decimal(12,2),
+    currency        FixedString(3),
+    round_time      DateTime64(3),
+    session_id      UUID
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(round_time)
+ORDER BY (round_time, game_id);
+
+CREATE TABLE games (
+    game_id         String,
+    game_name       String,
+    provider        LowCardinality(String),
+    category        Enum8('SLOTS'=1,'TABLE'=2,'LIVE'=3,'INSTANT'=4,'JACKPOT'=5),
+    theoretical_rtp Decimal(6,4),
+    volatility      Enum8('LOW'=1,'MEDIUM'=2,'HIGH'=3),
+    launched_on     Date,
+    active          UInt8
+) ENGINE = ReplacingMergeTree()
+ORDER BY game_id;
+
+CREATE TABLE bonus_costs (
+    cost_date       Date,
+    game_id         String,
+    bonus_wagered   Decimal(14,2),
+    bonus_payout    Decimal(14,2)
+) ENGINE = MergeTree()
+ORDER BY (cost_date, game_id);`,
+    sampleData:`-- Games catalogue
+INSERT INTO games VALUES
+('GM-001','Starburst','NetEnt',1,0.9609,1,'2018-05-10',1),
+('GM-002','Book of Dead','Play''n GO',1,0.9421,3,'2019-01-15',1),
+('GM-003','Lightning Roulette','Evolution',3,0.9712,2,'2020-03-22',1),
+('GM-004','Mega Moolah','Microgaming',5,0.8835,3,'2017-11-05',1),
+('GM-005','Sweet Bonanza','Pragmatic Play',1,0.9648,3,'2021-08-30',1);
+
+-- Game rounds
+INSERT INTO game_rounds VALUES
+(700001,66001,'GM-001','NetEnt',1.00,2.50,'EUR','2024-04-20 19:00:00.123',generateUUIDv4()),
+(700002,66001,'GM-001','NetEnt',1.00,0.00,'EUR','2024-04-20 19:00:08.211',generateUUIDv4()),
+(700003,66002,'GM-002','Play''n GO',2.50,12.50,'EUR','2024-04-20 19:01:00.000',generateUUIDv4()),
+(700004,66003,'GM-003','Evolution',5.00,0.00,'EUR','2024-04-20 19:05:00.000',generateUUIDv4()),
+(700005,66004,'GM-005','Pragmatic Play',0.50,3.50,'EUR','2024-04-20 19:08:30.000',generateUUIDv4());
+
+-- Bonus costs
+INSERT INTO bonus_costs VALUES
+('2024-04-20','GM-001',125000.00,118500.00),
+('2024-04-20','GM-002',88000.00,84200.00),
+('2024-04-20','GM-005',62000.00,60800.00);`,
+    qanda:[
+      {q:'Which games drove the most GGR last week and how does that compare with their theoretical RTP?',
+       a:'Aggregate game_rounds summing bet_amount - win_amount as GGR per game_id, then join to games to compare actual hold against (1 - theoretical_rtp). The agent surfaces titles materially above or below expected hold and flags variance concerns.'},
+      {q:'Show NGR by provider after deducting bonus costs',
+       a:'Compute GGR per provider from game_rounds, subtract the bonus_payout - bonus_wagered net from bonus_costs joined on game_id, and rank providers by NGR. The agent gives a true contribution view rather than a gross figure.'},
+      {q:'Which slots have the lowest player retention after first play?',
+       a:'For each game_id count distinct customer_id whose first play is in game_rounds and check whether they returned within seven days. The agent ranks games by single-session abandonment and ties this to volatility from the games table.'},
+      {q:'How is RTP tracking against theoretical for high-volatility titles?',
+       a:'Filter games where volatility = \'HIGH\', join to game_rounds, compute actual RTP as sum(win_amount)/sum(bet_amount), and contrast against theoretical_rtp. The agent shows the convergence gap by sample size, calling out games still inside expected variance bands.'},
+      {q:'Compare GGR per round for jackpot versus standard slots',
+       a:'Filter games by category, group game_rounds, and compute average GGR per round and per active customer. The agent quantifies the economic profile of jackpot inventory relative to baseline slots.'},
+      {q:'Which providers are generating the most rounds per active customer?',
+       a:'Count rounds per customer per provider and average across customers using game_rounds, joined to games for provider attribution. The agent shows which suppliers are dominating engagement on a per-player basis.'},
+      {q:'What if we removed the bottom decile of games by GGR — what is the upside?',
+       a:'Identify game_ids in the lowest GGR decile over a chosen window, simulate redistributing their spins to similar titles based on player overlap, and project incremental GGR. The agent presents a content-rationalisation case with sensitivity ranges.'},
+      {q:'Are new releases since January cannibalising existing titles or growing the pie?',
+       a:'Filter games launched_on >= \'2024-01-01\' and compute their incremental contribution versus changes in GGR on similar-volatility incumbents. The agent shows net portfolio impact and surfaces successful versus cannibalising launches.'}
+    ]
+  },
+  {
+    id:'live-casino-ops',
+    sector:'cas',
+    sectorLabel:'Casino & Games',
+    title:'Live Casino Operations Agent',
+    description:'Investigate live dealer performance, table utilisation, and game-round economics to keep studio floors running profitably. ClickHouse captures every round, dealer change, and table state event, enabling AI agents to spot underperforming shifts and optimise studio configuration.',
+    schema:`-- Live Casino Operations Schema
+CREATE TABLE live_rounds (
+    round_id        UInt64,
+    table_id        String,
+    dealer_id       String,
+    game_type       LowCardinality(String),
+    round_start     DateTime64(3),
+    round_end       DateTime64(3),
+    bets_taken      Decimal(14,2),
+    total_payout    Decimal(14,2),
+    player_count    UInt16
+) ENGINE = MergeTree()
+ORDER BY (round_start, table_id);
+
+CREATE TABLE dealers (
+    dealer_id       String,
+    dealer_name     String,
+    studio          LowCardinality(String),
+    languages       Array(String),
+    hired_on        Date,
+    active          UInt8
+) ENGINE = ReplacingMergeTree()
+ORDER BY dealer_id;
+
+CREATE TABLE tables (
+    table_id        String,
+    game_type       LowCardinality(String),
+    studio          LowCardinality(String),
+    min_bet         Decimal(10,2),
+    max_bet         Decimal(12,2),
+    operating_cost_hour Decimal(10,2)
+) ENGINE = ReplacingMergeTree()
+ORDER BY table_id;
+
+CREATE TABLE table_state (
+    state_time      DateTime64(3),
+    table_id        String,
+    status          Enum8('OPEN'=1,'PAUSED'=2,'CLOSED'=3,'MAINTENANCE'=4),
+    dealer_id       String
+) ENGINE = MergeTree()
+ORDER BY (state_time, table_id);`,
+    sampleData:`-- Dealers
+INSERT INTO dealers VALUES
+('D-1001','Anna K','Riga',['EN','RU'],'2022-03-01',1),
+('D-1002','Mihai P','Bucharest',['EN','RO','ES'],'2021-11-15',1),
+('D-1003','Diana V','Riga',['EN','LV'],'2023-06-10',1);
+
+-- Tables
+INSERT INTO tables VALUES
+('T-LR-01','Lightning Roulette','Riga',1.00,5000.00,180.00),
+('T-BJ-01','Blackjack','Riga',5.00,1000.00,140.00),
+('T-BAC-01','Baccarat','Bucharest',1.00,10000.00,160.00);
+
+-- Table state
+INSERT INTO table_state VALUES
+('2024-04-20 18:00:00.000','T-LR-01',1,'D-1001'),
+('2024-04-20 22:00:00.000','T-LR-01',1,'D-1003'),
+('2024-04-20 18:00:00.000','T-BJ-01',1,'D-1002');
+
+-- Live rounds
+INSERT INTO live_rounds VALUES
+(500001,'T-LR-01','D-1001','Lightning Roulette','2024-04-20 19:00:00.000','2024-04-20 19:01:10.000',2400.00,2180.00,18),
+(500002,'T-LR-01','D-1001','Lightning Roulette','2024-04-20 19:01:30.000','2024-04-20 19:02:40.000',2800.00,4500.00,22),
+(500003,'T-BJ-01','D-1002','Blackjack','2024-04-20 19:00:00.000','2024-04-20 19:01:45.000',650.00,610.00,7),
+(500004,'T-BAC-01','D-1004','Baccarat','2024-04-20 19:00:00.000','2024-04-20 19:01:25.000',8500.00,8200.00,14);`,
+    qanda:[
+      {q:'Which dealers are generating the highest GGR per hour on the floor?',
+       a:'Aggregate live_rounds by dealer_id summing (bets_taken - total_payout) and dividing by total dealer time derived from round_start and round_end. The agent ranks dealers and joins to dealers for names and studios.'},
+      {q:'Show average rounds per hour by table and game type',
+       a:'Count rounds per table_id within an hour window in live_rounds and average across the day, grouped by game_type via the tables table. The agent highlights tables underperforming the studio benchmark on throughput.'},
+      {q:'Which tables are operating below break-even versus their operating cost?',
+       a:'Compute hourly GGR from live_rounds and compare against tables.operating_cost_hour. The agent flags any table whose contribution margin is negative across recent shifts and suggests closures or staffing changes.'},
+      {q:'Identify dealer shifts where player_count dropped sharply mid-session',
+       a:'Window-function the player_count field per dealer_id and round_start, looking for material declines within a single shift. The agent can correlate drops with specific dealers, language coverage, or table game_type.'},
+      {q:'How does utilisation differ between Riga and Bucharest studios?',
+       a:'Join live_rounds via tables.studio and compute active-round seconds versus total table-state OPEN time from table_state. The agent shows utilisation percentages by studio and game_type, surfacing where capacity is being wasted.'},
+      {q:'What is the GGR difference between top-quartile and bottom-quartile dealers on Lightning Roulette?',
+       a:'Filter live_rounds for game_type = \'Lightning Roulette\', compute GGR per dealer, and bucket into quartiles. The agent quantifies the dealer-driven spread in performance and proposes training or rota implications.'},
+      {q:'What if we extended peak-hour staffing on baccarat tables by one hour — what is the projected GGR uplift?',
+       a:'Use historical live_rounds during the proposed window to model expected bets_taken and hold, multiply by likely player_count from comparable hours, and net against incremental operating_cost_hour. The agent presents a projected contribution figure.'},
+      {q:'Which dealers handle the highest stakes without elevated payout ratios?',
+       a:'Compute average bets_taken per round and total_payout / bets_taken per dealer_id in live_rounds. The agent surfaces dealers that consistently attract high-roller play while maintaining expected hold.'}
+    ]
+  },
+  {
+    id:'player-clv',
+    sector:'pl',
+    sectorLabel:'Player & CRM',
+    title:'Player Lifetime Value Agent',
+    description:'Segment customers by CLV and predict churn risk so CRM teams can target retention, win-back, and reactivation campaigns with precision. ClickHouse stores the full play, deposit, and engagement history per player, enabling AI agents to investigate cohorts and explain the drivers of value.',
+    schema:`-- Player CLV Schema
+CREATE TABLE players (
+    player_id       UInt64,
+    registered_on   Date,
+    country         FixedString(2),
+    acquisition_channel LowCardinality(String),
+    segment         Enum8('NEW'=1,'ACTIVE'=2,'AT_RISK'=3,'CHURNED'=4,'REACTIVATED'=5),
+    last_session    DateTime
+) ENGINE = ReplacingMergeTree(last_session)
+ORDER BY player_id;
+
+CREATE TABLE player_value (
+    snapshot_date   Date,
+    player_id       UInt64,
+    deposits_lifetime Decimal(14,2),
+    ngr_lifetime    Decimal(14,2),
+    bonus_lifetime  Decimal(14,2),
+    sessions_30d    UInt32,
+    days_since_last_play UInt16,
+    predicted_clv   Decimal(12,2),
+    churn_score     Decimal(6,4)
+) ENGINE = MergeTree()
+ORDER BY (snapshot_date, player_id);
+
+CREATE TABLE retention_campaigns (
+    campaign_id     UUID,
+    player_id       UInt64,
+    campaign_type   LowCardinality(String),
+    sent_at         DateTime,
+    responded       UInt8,
+    deposit_after   Decimal(12,2)
+) ENGINE = MergeTree()
+ORDER BY (sent_at, player_id);`,
+    sampleData:`-- Players
+INSERT INTO players VALUES
+(330001,'2021-06-12','GB','google-cpc',2,'2024-04-19 22:30:00'),
+(330002,'2020-02-04','DE','affiliate-aff42',3,'2024-03-25 11:00:00'),
+(330003,'2023-11-20','SE','facebook-paid',1,'2024-04-20 18:45:00'),
+(330004,'2019-08-01','GB','seo-organic',4,'2023-11-12 09:10:00');
+
+-- Player value
+INSERT INTO player_value VALUES
+('2024-04-20',330001,28500.00,9400.00,1200.00,18,1,4200.00,0.1200),
+('2024-04-20',330002,42000.00,11800.00,2100.00,2,26,2900.00,0.6800),
+('2024-04-20',330003,1200.00,380.00,250.00,9,0,1850.00,0.0900),
+('2024-04-20',330004,18500.00,5200.00,950.00,0,160,0.00,0.9700);
+
+-- Retention campaigns
+INSERT INTO retention_campaigns VALUES
+(generateUUIDv4(),330002,'reactivation_freespins','2024-04-15 09:00:00',1,250.00),
+(generateUUIDv4(),330004,'reactivation_cash','2024-04-12 10:00:00',0,0.00);`,
+    qanda:[
+      {q:'Which player segments are contributing the most NGR this quarter?',
+       a:'Sum ngr_lifetime per players.segment from joined player_value snapshots within the quarter and rank. The agent contextualises with player counts and average value per player so CRM understands where revenue concentration sits.'},
+      {q:'Show the top 100 highest predicted CLV players who are currently AT_RISK',
+       a:'Filter players where segment = \'AT_RISK\' and join the latest player_value snapshot ordered by predicted_clv descending. The agent surfaces the most valuable retention opportunities and includes days_since_last_play to help prioritise outreach.'},
+      {q:'How effective was the freespins reactivation campaign in the last month?',
+       a:'Filter retention_campaigns where campaign_type = \'reactivation_freespins\' and compute response rate and total deposit_after divided by send count. The agent compares this against other campaign types over the same period.'},
+      {q:'Investigate churn drivers — which behavioural signals best predict it?',
+       a:'Compare player_value features such as sessions_30d, bonus_lifetime/ngr_lifetime ratio, and days_since_last_play between churned and active cohorts. The agent quantifies which signals separate the populations most strongly.'},
+      {q:'Which acquisition channels produced the highest lifetime NGR per player?',
+       a:'Group players by acquisition_channel, join to player_value for ngr_lifetime, and average per player. The agent ranks channels by post-acquisition economics rather than gross signup volume.'},
+      {q:'Show cohort retention curves by registration month',
+       a:'Bucket players by toStartOfMonth(registered_on) and compute the percentage still active after 30, 60, 90, and 180 days using last_session. The agent visualises retention curves and flags cohorts decaying faster than usual.'},
+      {q:'What if we doubled the budget of reactivation campaigns for top-CLV churned players — what is the ROI?',
+       a:'Use historical response rate and deposit_after by predicted_clv decile in retention_campaigns, project incremental NGR at scaled volume, and net against doubled campaign cost. The agent presents an ROI envelope with confidence ranges.'},
+      {q:'Find players whose churn_score has risen sharply since last snapshot',
+       a:'Compare current churn_score in player_value against the score from a prior snapshot_date per player_id, ranking the largest increases. The agent gives CRM an early-warning queue before players go fully dormant.'}
+    ]
+  },
+  {
+    id:'vip-management',
+    sector:'pl',
+    sectorLabel:'Player & CRM',
+    title:'VIP Player Management Agent',
+    description:'Track high-roller activity, host engagement, and the cost-to-serve of VIPs so the team can balance retention spend against contribution margin. ClickHouse stores every VIP touchpoint and play event, enabling AI agents to surface attention gaps and quantify host ROI.',
+    schema:`-- VIP Management Schema
+CREATE TABLE vip_players (
+    player_id       UInt64,
+    tier            Enum8('SILVER'=1,'GOLD'=2,'PLATINUM'=3,'BLACK'=4),
+    host_id         String,
+    onboarded_on    Date,
+    monthly_target  Decimal(12,2),
+    active          UInt8
+) ENGINE = ReplacingMergeTree()
+ORDER BY player_id;
+
+CREATE TABLE vip_activity (
+    activity_date   Date,
+    player_id       UInt64,
+    deposits        Decimal(14,2),
+    withdrawals     Decimal(14,2),
+    ngr             Decimal(14,2),
+    bonus_cost      Decimal(12,2),
+    sessions        UInt16
+) ENGINE = MergeTree()
+ORDER BY (activity_date, player_id);
+
+CREATE TABLE host_interactions (
+    interaction_id  UUID,
+    host_id         String,
+    player_id       UInt64,
+    channel         Enum8('PHONE'=1,'EMAIL'=2,'WHATSAPP'=3,'EVENT'=4,'GIFT'=5),
+    contact_time    DateTime,
+    outcome         LowCardinality(String),
+    cost            Decimal(10,2)
+) ENGINE = MergeTree()
+ORDER BY (contact_time, host_id);
+
+CREATE TABLE hosts (
+    host_id         String,
+    host_name       String,
+    region          LowCardinality(String),
+    salary_band     Decimal(12,2)
+) ENGINE = ReplacingMergeTree()
+ORDER BY host_id;`,
+    sampleData:`-- VIPs
+INSERT INTO vip_players VALUES
+(440001,4,'H-01','2019-04-15',50000.00,1),
+(440002,3,'H-01','2021-09-01',20000.00,1),
+(440003,2,'H-02','2022-12-10',8000.00,1);
+
+-- Activity
+INSERT INTO vip_activity VALUES
+('2024-04-20',440001,28000.00,12000.00,14500.00,2200.00,4),
+('2024-04-20',440002,9500.00,3000.00,4100.00,950.00,3),
+('2024-04-20',440003,2200.00,0.00,820.00,180.00,2);
+
+-- Host interactions
+INSERT INTO host_interactions VALUES
+(generateUUIDv4(),'H-01',440001,1,'2024-04-19 17:00:00','positive',0.00),
+(generateUUIDv4(),'H-01',440001,5,'2024-04-15 10:00:00','positive',1200.00),
+(generateUUIDv4(),'H-02',440003,2,'2024-04-18 14:00:00','no_response',0.00);
+
+-- Hosts
+INSERT INTO hosts VALUES
+('H-01','Sarah M','EMEA',85000.00),
+('H-02','Luca R','EMEA',72000.00);`,
+    qanda:[
+      {q:'Which VIPs have missed their monthly deposit target by the largest margin?',
+       a:'Sum deposits from vip_activity for the current month per player_id and compare against vip_players.monthly_target. The agent ranks the biggest shortfalls and joins host details so the team can route outreach.'},
+      {q:'Show host contribution — NGR generated versus total cost-to-serve',
+       a:'Sum ngr from vip_activity for players linked to each host_id, deduct host_interactions.cost and a pro-rated share of hosts.salary_band, and present a contribution figure per host. The agent shows which hosts deliver the best return.'},
+      {q:'Identify Platinum and Black tier players with no host contact in the last 14 days',
+       a:'Filter vip_players where tier IN (\'PLATINUM\',\'BLACK\') and left-join host_interactions, keeping rows where the latest contact_time is older than 14 days. The agent generates a critical outreach list.'},
+      {q:'Compare bonus_cost to NGR ratio across tiers',
+       a:'Aggregate vip_activity by joining to vip_players.tier and compute SUM(bonus_cost) / SUM(ngr) per tier. The agent shows whether the cost of bonuses is in line with each tier\'s contribution.'},
+      {q:'Which hosts have the highest response rates from VIPs?',
+       a:'Group host_interactions by host_id and compute the share where outcome != \'no_response\'. The agent joins to hosts for naming and ranks engagement effectiveness across the team.'},
+      {q:'Find VIPs whose deposit pattern has dropped 50 percent month over month',
+       a:'Compare current-month deposit sums in vip_activity against the prior month per player_id and flag declines greater than 50 percent. The agent presents an at-risk list with tier and host context.'},
+      {q:'What if we added one more host to cover the EMEA region — what is the breakeven NGR?',
+       a:'Take the average NGR per VIP per host from vip_activity, estimate how many additional VIPs a new host could reasonably cover, and compare projected incremental NGR with hosts.salary_band plus expected host_interactions.cost. The agent presents a breakeven scenario.'},
+      {q:'Which VIPs receive disproportionate bonus spend relative to their NGR?',
+       a:'Compute bonus_cost / ngr per player from vip_activity over the trailing 90 days and flag the top decile. The agent surfaces over-incentivised customers where retention spend may be subsidising losses rather than driving value.'}
+    ]
+  },
+  {
+    id:'bonus-abuse',
+    sector:'rg',
+    sectorLabel:'Responsible Gambling & Fraud',
+    title:'Bonus Abuse Detection Agent',
+    description:'Detect multi-accounting, bonus farming, and low-margin abusers by correlating device, payment, and play patterns with promotional uptake. ClickHouse stores granular bonus and behavioural data, enabling AI agents to build cross-account risk pictures and quantify promotional leakage.',
+    schema:`-- Bonus Abuse Schema
+CREATE TABLE bonus_grants (
+    grant_id        UUID,
+    player_id       UInt64,
+    bonus_code      LowCardinality(String),
+    granted_at      DateTime,
+    amount          Decimal(12,2),
+    wagering_required Decimal(12,2),
+    wagering_completed Decimal(12,2),
+    status          Enum8('ACTIVE'=1,'COMPLETED'=2,'FORFEITED'=3,'WITHDRAWN'=4)
+) ENGINE = MergeTree()
+ORDER BY (granted_at, player_id);
+
+CREATE TABLE account_links (
+    player_id       UInt64,
+    device_id       String,
+    ip_hash         String,
+    payment_token   String,
+    first_seen      DateTime
+) ENGINE = MergeTree()
+ORDER BY (player_id, device_id);
+
+CREATE TABLE bonus_play (
+    round_id        UInt64,
+    player_id       UInt64,
+    grant_id        UUID,
+    game_id         String,
+    bet_amount      Decimal(12,2),
+    win_amount      Decimal(12,2),
+    round_time      DateTime64(3)
+) ENGINE = MergeTree()
+ORDER BY (round_time, player_id);
+
+CREATE TABLE abuse_flags (
+    flag_id         UUID,
+    player_id       UInt64,
+    flag_type       LowCardinality(String),
+    severity        Enum8('LOW'=1,'MEDIUM'=2,'HIGH'=3),
+    raised_at       DateTime,
+    status          Enum8('OPEN'=1,'CLOSED'=2,'CONFIRMED'=3)
+) ENGINE = MergeTree()
+ORDER BY (raised_at, player_id);`,
+    sampleData:`-- Account links
+INSERT INTO account_links VALUES
+(220001,'dev-aaa','iphash-99','tok-1','2024-01-10 10:00:00'),
+(220002,'dev-aaa','iphash-99','tok-2','2024-02-15 11:00:00'),
+(220003,'dev-aaa','iphash-99','tok-3','2024-03-01 12:00:00'),
+(220004,'dev-bbb','iphash-77','tok-4','2024-04-01 09:00:00');
+
+-- Bonus grants
+INSERT INTO bonus_grants VALUES
+('11111111-0000-0000-0000-000000000001',220001,'WELCOME100','2024-01-10 10:05:00',100.00,2000.00,2000.00,2),
+('11111111-0000-0000-0000-000000000002',220002,'WELCOME100','2024-02-15 11:10:00',100.00,2000.00,2000.00,2),
+('11111111-0000-0000-0000-000000000003',220003,'WELCOME100','2024-03-01 12:05:00',100.00,2000.00,2000.00,2),
+('11111111-0000-0000-0000-000000000004',220004,'RELOAD50','2024-04-05 18:00:00',50.00,1000.00,250.00,1);
+
+-- Bonus play
+INSERT INTO bonus_play VALUES
+(310001,220001,'11111111-0000-0000-0000-000000000001','GM-LOW-VOL',1.00,0.95,'2024-01-10 10:10:00.000'),
+(310002,220002,'11111111-0000-0000-0000-000000000002','GM-LOW-VOL',1.00,0.94,'2024-02-15 11:15:00.000'),
+(310003,220003,'11111111-0000-0000-0000-000000000003','GM-LOW-VOL',1.00,0.96,'2024-03-01 12:10:00.000');
+
+-- Abuse flags
+INSERT INTO abuse_flags VALUES
+(generateUUIDv4(),220001,'MULTI_ACCOUNT',3,'2024-03-05 09:00:00',1),
+(generateUUIDv4(),220002,'MULTI_ACCOUNT',3,'2024-03-05 09:00:00',1),
+(generateUUIDv4(),220003,'MULTI_ACCOUNT',3,'2024-03-05 09:00:00',1);`,
+    qanda:[
+      {q:'Which devices have been associated with three or more player accounts?',
+       a:'Group account_links by device_id and count DISTINCT player_id, filtering for counts greater than two. The agent ranks the worst-offending devices and pulls linked players for review against bonus_grants history.'},
+      {q:'Show players who claimed the same welcome bonus across multiple accounts on shared payment tokens',
+       a:'Self-join account_links on payment_token where player_id differs and bonus_grants.bonus_code = \'WELCOME100\'. The agent surfaces clusters of accounts that almost certainly belong to the same individual.'},
+      {q:'Identify players whose bonus play is concentrated on low-volatility games to grind wagering',
+       a:'Join bonus_play to games, filter where game volatility is LOW, and compute the share of bet_amount completed under each grant_id. The agent flags players whose wagering completion is overwhelmingly on margin-light titles.'},
+      {q:'How much net bonus margin has been lost to confirmed abusers over the last quarter?',
+       a:'Filter abuse_flags where status = \'CONFIRMED\' and join to bonus_grants and bonus_play to compute net cost as (amount - GGR on bonus play) per player. The agent sums the total leakage and breaks it down by bonus_code.'},
+      {q:'Which bonus codes are most associated with confirmed abuse cases?',
+       a:'Join bonus_grants to abuse_flags on player_id where status = \'CONFIRMED\' and group by bonus_code. The agent ranks promotional offers by their abuse footprint and suggests T&C revisions.'},
+      {q:'Find players whose first deposit was followed within minutes by maximum bonus stake activity',
+       a:'Order bonus_play by round_time per player_id and compute the elapsed time between bonus grant and first wager, ranking by lowest gap with highest cumulative bet_amount. The agent surfaces highly purposeful abuse behaviour.'},
+      {q:'What if we required two-factor verification before granting reload bonuses — what would we save?',
+       a:'Estimate the share of historical RELOAD bonus grants going to players later flagged for abuse in abuse_flags, model a likely drop-off in claim rate from 2FA friction, and project the net saving. The agent presents the tradeoff against legitimate-player impact.'},
+      {q:'Which player clusters share devices, IPs, and payment tokens simultaneously?',
+       a:'Self-join account_links on combinations of device_id, ip_hash, and payment_token to identify cluster signatures. The agent assembles cluster graphs and ranks them by total bonus_grants.amount drawn across the linked accounts.'}
+    ]
+  },
+  {
+    id:'responsible-gambling',
+    sector:'rg',
+    sectorLabel:'Responsible Gambling & Fraud',
+    title:'Responsible Gambling Monitor Agent',
+    description:'Surface problem-gambling signals from deposit velocity, session intensity, and play patterns so safer-gambling teams can intervene appropriately. ClickHouse holds full player behavioural histories, enabling AI agents to detect deteriorating patterns and recommend interventions with clear evidence.',
+    schema:`-- Responsible Gambling Schema
+CREATE TABLE deposits (
+    deposit_id      UInt64,
+    player_id       UInt64,
+    amount          Decimal(12,2),
+    currency        FixedString(3),
+    method          LowCardinality(String),
+    deposit_time    DateTime64(3),
+    declined        UInt8
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(deposit_time)
+ORDER BY (deposit_time, player_id);
+
+CREATE TABLE sessions (
+    session_id      UUID,
+    player_id       UInt64,
+    started_at      DateTime64(3),
+    ended_at        DateTime64(3),
+    total_stake     Decimal(14,2),
+    total_payout    Decimal(14,2),
+    chasing_score   Decimal(6,4)
+) ENGINE = MergeTree()
+ORDER BY (started_at, player_id);
+
+CREATE TABLE rg_signals (
+    signal_id       UUID,
+    player_id       UInt64,
+    signal_name     LowCardinality(String),
+    score           Decimal(6,4),
+    detected_at     DateTime,
+    intervention    LowCardinality(String)
+) ENGINE = MergeTree()
+ORDER BY (detected_at, player_id);
+
+CREATE TABLE self_exclusions (
+    player_id       UInt64,
+    exclusion_type  Enum8('TIMEOUT'=1,'COOLOFF'=2,'SELF_EXCLUDE'=3,'GAMSTOP'=4),
+    started_on      Date,
+    ends_on         Nullable(Date),
+    reason          LowCardinality(String)
+) ENGINE = ReplacingMergeTree()
+ORDER BY (player_id, started_on);`,
+    sampleData:`-- Deposits showing velocity
+INSERT INTO deposits VALUES
+(910001,110001,50.00,'GBP','card','2024-04-20 19:00:00.000',0),
+(910002,110001,100.00,'GBP','card','2024-04-20 19:15:00.000',0),
+(910003,110001,250.00,'GBP','card','2024-04-20 19:35:00.000',0),
+(910004,110001,500.00,'GBP','card','2024-04-20 20:05:00.000',0),
+(910005,110001,500.00,'GBP','card','2024-04-20 20:25:00.000',1),
+(910006,110002,20.00,'GBP','paypal','2024-04-20 18:00:00.000',0);
+
+-- Sessions
+INSERT INTO sessions VALUES
+(generateUUIDv4(),110001,'2024-04-20 18:55:00.000','2024-04-20 22:40:00.000',3800.00,1900.00,0.7800),
+(generateUUIDv4(),110002,'2024-04-20 17:55:00.000','2024-04-20 18:30:00.000',45.00,40.00,0.0200);
+
+-- Signals
+INSERT INTO rg_signals VALUES
+(generateUUIDv4(),110001,'DEPOSIT_VELOCITY',0.8900,'2024-04-20 20:10:00','popup_check_in'),
+(generateUUIDv4(),110001,'CHASING_LOSSES',0.7800,'2024-04-20 22:00:00','soft_limit');
+
+-- Self exclusions
+INSERT INTO self_exclusions VALUES
+(110099,3,'2024-04-10',NULL,'self_initiated'),
+(110100,2,'2024-04-18','2024-04-25','cooloff_24h_extended');`,
+    qanda:[
+      {q:'Which players made five or more deposits within a two-hour window today?',
+       a:'Window over deposits ordered by deposit_time per player_id, count deposits within each rolling two-hour window, and filter for counts above the threshold. The agent surfaces high-velocity players and joins to sessions for context.'},
+      {q:'Show players whose deposit amounts increased materially after a losing session',
+       a:'Sequence sessions and deposits per player_id and look for cases where deposit amount rises after total_payout < total_stake. The agent quantifies the increase and ranks chasing patterns by chasing_score.'},
+      {q:'Identify candidates for proactive self-exclusion outreach this week',
+       a:'Combine rg_signals scored above 0.7 with sessions extending across late-night hours and rising deposit velocity in deposits. The agent compiles a prioritised list excluding players already in self_exclusions.'},
+      {q:'How effective have soft-limit interventions been at reducing subsequent play?',
+       a:'Filter rg_signals where intervention = \'soft_limit\' and compare per-player total_stake in sessions for the seven days before and after detected_at. The agent quantifies behaviour change and identifies non-responders.'},
+      {q:'Which methods are most associated with high-velocity deposit behaviour?',
+       a:'Group deposits by method and compute average inter-deposit time per player, contrasting card, e-wallet, and bank transfer behaviour. The agent highlights methods that may merit cooling-off or velocity controls.'},
+      {q:'Detect overnight play sessions that exceed three hours',
+       a:'Filter sessions where started_at falls within 23:00-05:00 local time and duration is greater than three hours. The agent quantifies the population, surfaces repeat patterns, and flags players for safer-gambling review.'},
+      {q:'What if we capped daily deposits at 1000 GBP — how many players would be affected?',
+       a:'Aggregate deposits by player_id and day, count distinct days where the sum exceeds 1000 GBP, and compute the share of affected players and lost handle. The agent presents the policy impact alongside expected RG benefit.'},
+      {q:'Show players who returned within 24 hours of a timeout ending',
+       a:'Join self_exclusions where exclusion_type = \'TIMEOUT\' to deposits and sessions occurring shortly after ends_on. The agent surfaces high-risk reactivations that may need stronger interventions next time.'}
+    ]
+  },
+  {
+    id:'affiliate-quality',
+    sector:'af',
+    sectorLabel:'Affiliates & Marketing',
+    title:'Affiliate Performance & Traffic Quality Agent',
+    description:'Compare affiliate channels on CPA, revenue share, and the long-term quality of players they deliver — including fraud and incentivised-traffic risk. ClickHouse stores click, registration, and play data per affiliate, enabling AI agents to investigate channel ROI and surface suspect partners.',
+    schema:`-- Affiliate Schema
+CREATE TABLE affiliates (
+    affiliate_id    String,
+    affiliate_name  String,
+    deal_type       Enum8('CPA'=1,'REVSHARE'=2,'HYBRID'=3),
+    cpa_amount      Decimal(10,2),
+    revshare_pct    Decimal(6,4),
+    country         FixedString(2),
+    active          UInt8
+) ENGINE = ReplacingMergeTree()
+ORDER BY affiliate_id;
+
+CREATE TABLE affiliate_clicks (
+    click_id        UInt64,
+    affiliate_id    String,
+    sub_id          String,
+    click_time      DateTime64(3),
+    ip_hash         String,
+    landing_page    String
+) ENGINE = MergeTree()
+ORDER BY (click_time, affiliate_id);
+
+CREATE TABLE affiliate_players (
+    player_id       UInt64,
+    affiliate_id    String,
+    sub_id          String,
+    registered_at   DateTime,
+    ftd_at          Nullable(DateTime),
+    ftd_amount      Nullable(Decimal(12,2)),
+    ngr_lifetime    Decimal(14,2),
+    bonus_lifetime  Decimal(12,2),
+    fraud_flag      UInt8
+) ENGINE = MergeTree()
+ORDER BY (registered_at, affiliate_id);
+
+CREATE TABLE affiliate_costs (
+    cost_month      Date,
+    affiliate_id    String,
+    cpa_paid        Decimal(14,2),
+    revshare_paid   Decimal(14,2)
+) ENGINE = MergeTree()
+ORDER BY (cost_month, affiliate_id);`,
+    sampleData:`-- Affiliates
+INSERT INTO affiliates VALUES
+('AFF-001','BetGuide UK',1,150.00,0.0000,'GB',1),
+('AFF-002','SlotsHunter',2,0.00,0.3500,'DE',1),
+('AFF-003','TipsterPro',3,75.00,0.2000,'GB',1),
+('AFF-004','CashbackCentral',1,150.00,0.0000,'GB',1);
+
+-- Clicks
+INSERT INTO affiliate_clicks VALUES
+(660001,'AFF-001','homepage','2024-04-19 11:00:00.000','iphash-a1','/landing/welcome'),
+(660002,'AFF-002','reviews','2024-04-19 12:30:00.000','iphash-a2','/landing/casino'),
+(660003,'AFF-004','cashback','2024-04-19 13:00:00.000','iphash-a3','/landing/cashback');
+
+-- Affiliate players
+INSERT INTO affiliate_players VALUES
+(990001,'AFF-001','homepage','2024-04-19 11:30:00','2024-04-19 11:45:00',100.00,420.00,50.00,0),
+(990002,'AFF-002','reviews','2024-04-19 13:00:00','2024-04-19 13:20:00',50.00,1850.00,180.00,0),
+(990003,'AFF-004','cashback','2024-04-19 13:15:00','2024-04-19 13:25:00',20.00,15.00,18.00,1),
+(990004,'AFF-004','cashback','2024-04-19 13:18:00','2024-04-19 13:28:00',20.00,12.00,18.00,1);
+
+-- Costs
+INSERT INTO affiliate_costs VALUES
+('2024-04-01','AFF-001',7500.00,0.00),
+('2024-04-01','AFF-002',0.00,4200.00),
+('2024-04-01','AFF-004',9000.00,0.00);`,
+    qanda:[
+      {q:'Which affiliates produced the highest NGR per FTD over the last quarter?',
+       a:'Filter affiliate_players where ftd_at is not null, sum ngr_lifetime, and divide by count of FTDs grouped by affiliate_id. The agent ranks partners on quality of acquired player rather than raw volume.'},
+      {q:'Compare CPA versus revenue-share affiliates on net contribution',
+       a:'Join affiliates with affiliate_players and affiliate_costs, compute (ngr_lifetime - bonus_lifetime - cpa_paid - revshare_paid) per deal_type. The agent shows which commercial structure is delivering better economics by segment.'},
+      {q:'Identify affiliates with abnormally high fraud_flag rates',
+       a:'Group affiliate_players by affiliate_id and compute the share of players with fraud_flag = 1. The agent ranks the worst offenders and flags partners for compliance review or termination.'},
+      {q:'Show click-to-FTD conversion by affiliate',
+       a:'Count clicks per affiliate_id in affiliate_clicks within a window and divide by FTDs in affiliate_players over the same window. The agent surfaces partners with very high or very low conversion to investigate quality or fraud signals.'},
+      {q:'Which sub_ids of an affiliate are delivering the strongest players?',
+       a:'Group affiliate_players by affiliate_id and sub_id, summing ngr_lifetime per FTD. The agent identifies the best landing pages or creatives within each partner and recommends where to direct more spend.'},
+      {q:'Investigate affiliates whose players cluster suspiciously close in registration time and IP',
+       a:'Join affiliate_clicks to affiliate_players via ip_hash and analyse the variance in registered_at per affiliate. The agent flags partners where registrations are bursty or geographically narrow, indicating incentivised or bot traffic.'},
+      {q:'What if we switched AFF-001 from CPA to hybrid — what would the cost have been?',
+       a:'Replay historical affiliate_players for AFF-001 under a hybrid model, computing notional cpa_paid plus revshare_pct on ngr_lifetime, and compare against actual affiliate_costs. The agent presents the cost difference and lifetime margin impact.'},
+      {q:'Which affiliates have the highest bonus_lifetime to NGR ratio?',
+       a:'Group affiliate_players by affiliate_id and compute SUM(bonus_lifetime) / SUM(ngr_lifetime). The agent identifies channels delivering players that mainly extract bonuses, supporting decisions about T&C or partner deprecation.'}
+    ]
+  },
+  {
+    id:'acquisition-channel-roi',
+    sector:'af',
+    sectorLabel:'Affiliates & Marketing',
+    title:'Acquisition Channel ROI Agent',
+    description:'Tie paid media spend to downstream FTDs and NGR by channel, campaign, and creative, factoring in attribution decay and cohort behaviour. ClickHouse stores ad spend, attribution events, and player NGR over time, enabling AI agents to allocate budget where it actually returns.',
+    schema:`-- Acquisition Channel ROI Schema
+CREATE TABLE ad_spend (
+    spend_date      Date,
+    channel         LowCardinality(String),
+    campaign_id     String,
+    creative_id     String,
+    country         FixedString(2),
+    impressions     UInt64,
+    clicks          UInt64,
+    spend           Decimal(12,2)
+) ENGINE = MergeTree()
+ORDER BY (spend_date, channel, campaign_id);
+
+CREATE TABLE attribution_events (
+    event_id        UInt64,
+    player_id       UInt64,
+    channel         LowCardinality(String),
+    campaign_id     String,
+    creative_id     String,
+    touchpoint      Enum8('VIEW'=1,'CLICK'=2,'REG'=3,'FTD'=4),
+    event_time      DateTime
+) ENGINE = MergeTree()
+ORDER BY (event_time, player_id);
+
+CREATE TABLE player_ngr (
+    snapshot_date   Date,
+    player_id       UInt64,
+    days_since_reg  UInt16,
+    ngr_to_date     Decimal(14,2),
+    ftd_amount      Decimal(12,2)
+) ENGINE = MergeTree()
+ORDER BY (snapshot_date, player_id);
+
+CREATE TABLE channels (
+    channel         LowCardinality(String),
+    channel_type    Enum8('PAID_SOCIAL'=1,'SEARCH'=2,'DISPLAY'=3,'AFFILIATE'=4,'CRM'=5,'ORGANIC'=6),
+    attribution_model LowCardinality(String)
+) ENGINE = ReplacingMergeTree()
+ORDER BY channel;`,
+    sampleData:`-- Channels
+INSERT INTO channels VALUES
+('google-uac',2,'last_click'),
+('facebook-paid',1,'data_driven'),
+('tiktok-paid',1,'data_driven'),
+('seo-organic',6,'last_click');
+
+-- Ad spend
+INSERT INTO ad_spend VALUES
+('2024-04-15','google-uac','camp-search-brand','crv-001','GB',420000,8500,4200.00),
+('2024-04-15','facebook-paid','camp-fb-slots','crv-fb-slots-02','DE',1100000,12200,6800.00),
+('2024-04-15','tiktok-paid','camp-tt-casino','crv-tt-spin-04','GB',2300000,18000,5400.00);
+
+-- Attribution events
+INSERT INTO attribution_events VALUES
+(80001,77881,'google-uac','camp-search-brand','crv-001',2,'2024-04-15 19:00:00'),
+(80002,77881,'google-uac','camp-search-brand','crv-001',3,'2024-04-15 19:08:00'),
+(80003,77881,'google-uac','camp-search-brand','crv-001',4,'2024-04-15 19:14:00'),
+(80004,77882,'facebook-paid','camp-fb-slots','crv-fb-slots-02',2,'2024-04-15 20:00:00'),
+(80005,77882,'facebook-paid','camp-fb-slots','crv-fb-slots-02',3,'2024-04-15 20:30:00');
+
+-- Player NGR
+INSERT INTO player_ngr VALUES
+('2024-04-20',77881,5,180.00,50.00),
+('2024-04-20',77882,5,42.00,25.00);`,
+    qanda:[
+      {q:'Which channels delivered the highest NGR-per-spend over the last 30 days?',
+       a:'Join attribution_events of touchpoint FTD to player_ngr, sum ngr_to_date per channel, and divide by ad_spend.spend over the same window. The agent ranks channels by efficiency and explains where dollar-for-dollar performance is strongest.'},
+      {q:'Show me FTD CPA by channel and country',
+       a:'Count touchpoint = FTD events in attribution_events grouped by channel and country, then divide ad_spend.spend by FTD count. The agent surfaces where customer-acquisition cost is rising fastest and where it remains efficient.'},
+      {q:'How does payback period vary by channel?',
+       a:'Track cumulative ngr_to_date in player_ngr by days_since_reg per channel cohort and compare against the average CPA. The agent identifies which channels recoup acquisition cost within 30, 60, or 90 days.'},
+      {q:'Which creatives are driving the best post-FTD NGR?',
+       a:'Join attribution_events of touchpoint FTD on creative_id to player_ngr and aggregate ngr_to_date per creative_id, normalising by FTD count. The agent ranks creatives on post-acquisition quality rather than just CPA.'},
+      {q:'Investigate whether TikTok-acquired players have weaker retention than Facebook ones',
+       a:'Cohort attribution_events by channel and join to player_ngr, comparing the share of players still generating NGR at 7, 30, and 60 days. The agent quantifies retention differences and the implied LTV gap.'},
+      {q:'Identify campaigns where CPC is rising but FTD conversion is flat',
+       a:'Compute spend/clicks per ad_spend row and FTDs/clicks via attribution_events, comparing month-over-month per campaign_id. The agent surfaces campaigns where efficiency is eroding even if spend looks healthy.'},
+      {q:'What if we reallocated 20 percent of TikTok budget to Google search — what is the projected NGR uplift?',
+       a:'Use historical NGR-per-spend by channel from ad_spend joined to player_ngr, apply diminishing-returns assumptions at higher spend levels, and project the net change in NGR. The agent presents the expected uplift range with explicit assumptions.'},
+      {q:'Build a channel attribution view that respects each channel\'s attribution_model',
+       a:'For channels where attribution_model = \'data_driven\' use multi-touch credit on attribution_events; for last-click channels assign full credit to the final touchpoint before FTD. The agent reconciles spend and NGR consistently across mixed-model channels.'}
+    ]
+  },
+
+  // ─── CONSTRUCTION ──────────────────────────────────────────────────────────
+  {
+    id:'tender-benchmarking',
+    sector:'cp',
+    sectorLabel:'Cost Planning & Estimating',
+    title:'Tender & Bid Cost Benchmarking Agent',
+    description:'Compare incoming contractor bid rates against internal estimates and historic tender wins to identify outliers, abnormally low pricing, and value-for-money risk. ClickHouse stores years of tender returns and rate libraries, allowing AI agents to benchmark items rapidly across projects, regions, and contractors.',
+    schema:`-- Tender Benchmarking Schema
+CREATE TABLE tenders (
+    tender_id        UUID,
+    project_id       String,
+    project_type     LowCardinality(String),
+    region           LowCardinality(String),
+    issue_date       Date,
+    return_date      Date,
+    estimated_value  Decimal(14,2),
+    status           Enum8('OPEN'=1,'RETURNED'=2,'AWARDED'=3,'WITHDRAWN'=4)
+) ENGINE = MergeTree()
+ORDER BY (return_date, project_type);
+
+CREATE TABLE tender_returns (
+    return_id        UUID,
+    tender_id        UUID,
+    contractor_id    String,
+    item_ref         String,
+    description      String,
+    unit             LowCardinality(String),
+    quantity         Decimal(14,3),
+    unit_rate        Decimal(14,4),
+    line_total       Decimal(14,2),
+    submitted_at     DateTime
+) ENGINE = MergeTree()
+ORDER BY (tender_id, item_ref, contractor_id);
+
+CREATE TABLE internal_estimates (
+    project_id       String,
+    item_ref         String,
+    description      String,
+    unit             LowCardinality(String),
+    quantity         Decimal(14,3),
+    estimate_rate    Decimal(14,4),
+    estimator        String,
+    estimate_date    Date
+) ENGINE = ReplacingMergeTree(estimate_date)
+ORDER BY (project_id, item_ref);
+
+CREATE TABLE awarded_rates (
+    project_id       String,
+    item_ref         String,
+    contractor_id    String,
+    award_rate       Decimal(14,4),
+    unit             LowCardinality(String),
+    region           LowCardinality(String),
+    award_date       Date
+) ENGINE = MergeTree()
+ORDER BY (award_date, item_ref);`,
+    sampleData:`-- Tenders
+INSERT INTO tenders VALUES
+(generateUUIDv4(), 'PRJ-1042', 'Commercial Office', 'London',     '2025-09-01', '2025-10-15', 18500000.00, 3),
+(generateUUIDv4(), 'PRJ-1078', 'Education',         'North West', '2025-10-10', '2025-11-20',  6200000.00, 2),
+(generateUUIDv4(), 'PRJ-1101', 'Residential',       'South East', '2025-11-01', '2025-12-12', 12400000.00, 1);
+
+-- Tender returns (excerpt - concrete and rebar lines)
+INSERT INTO tender_returns VALUES
+(generateUUIDv4(), generateUUIDv4(), 'CON-014', 'C20-001', 'C32/40 Concrete to foundations', 'm3', 850.000, 145.5000, 123675.00, '2025-10-14 16:00:00'),
+(generateUUIDv4(), generateUUIDv4(), 'CON-022', 'C20-001', 'C32/40 Concrete to foundations', 'm3', 850.000, 162.0000, 137700.00, '2025-10-14 17:10:00'),
+(generateUUIDv4(), generateUUIDv4(), 'CON-031', 'C20-001', 'C32/40 Concrete to foundations', 'm3', 850.000,  98.5000,  83725.00, '2025-10-14 18:45:00'),
+(generateUUIDv4(), generateUUIDv4(), 'CON-014', 'R10-002', 'High yield rebar B500B',         't',   62.500, 1180.0000, 73750.00, '2025-10-14 16:00:00');
+
+-- Internal estimates
+INSERT INTO internal_estimates VALUES
+('PRJ-1042', 'C20-001', 'C32/40 Concrete to foundations', 'm3', 850.000, 152.0000, 'J.Patel', '2025-08-20'),
+('PRJ-1042', 'R10-002', 'High yield rebar B500B',         't',   62.500, 1225.0000, 'J.Patel', '2025-08-20');
+
+-- Awarded rates (historic)
+INSERT INTO awarded_rates VALUES
+('PRJ-0954', 'C20-001', 'CON-008', 148.7500, 'm3', 'London', '2024-06-12'),
+('PRJ-0982', 'C20-001', 'CON-014', 151.2000, 'm3', 'London', '2024-11-03'),
+('PRJ-1003', 'R10-002', 'CON-022', 1198.5000, 't', 'London', '2025-02-14');`,
+    qanda:[
+      {q:'Which tender returns are more than 15% below our internal estimate?',
+       a:'Join tender_returns to internal_estimates on project_id and item_ref, compute (unit_rate - estimate_rate)/estimate_rate, and filter where the deviation is below -0.15. The agent surfaces abnormally low bids that may indicate scope misunderstanding or front-loading risk.'},
+      {q:'Benchmark the concrete unit rate on PRJ-1042 against historic London awards',
+       a:'Filter awarded_rates where item_ref = \'C20-001\' AND region = \'London\', compute mean and percentile bands, then compare against the unit_rate spread in tender_returns for the current tender. The agent reports where each contractor sits relative to the historic range.'},
+      {q:'Which contractors consistently price below the market average?',
+       a:'Group tender_returns by contractor_id, compute the average percentile rank of unit_rate per item_ref across tenders, and rank contractors. The agent identifies persistently aggressive bidders worth scrutinising for commercial robustness.'},
+      {q:'Show the spread of bid rates by item on the latest education tender',
+       a:'Filter tender_returns by the tender_id linked to project_type = \'Education\' with return_date in the last 60 days, then aggregate min, median, max, and standard deviation of unit_rate per item_ref. The output is a quick variance map for cost planners.'},
+      {q:'Are there items where every bidder came in higher than our estimate?',
+       a:'Join tender_returns to internal_estimates by project_id and item_ref, then group by item_ref and check MIN(unit_rate) > estimate_rate. The agent flags items where the estimate may need recalibration before the next tender.'},
+      {q:'Compare contractor CON-014\'s pricing this year against last year',
+       a:'Filter tender_returns for contractor_id = \'CON-014\', join to tenders for return_date, and aggregate unit_rate by item_ref across years. The agent shows where the contractor has hardened or softened pricing and quantifies the inflation embedded in their book.'},
+      {q:'What if we excluded the lowest bidder by default — what would average award rates look like over 5 years?',
+       a:'Replay awarded_rates by joining tender_returns ordered by unit_rate, drop the lowest per tender, and recompute the average. The agent presents the cost premium of a "no lowest" policy alongside potential risk-of-failure savings.'},
+      {q:'Identify regional pricing differentials for groundworks across our recent tenders',
+       a:'Group tender_returns joined to tenders by region for groundworks-related item_refs and compute median unit_rate. The agent highlights where London or South East premiums apply and supports regional cost-plan adjustments.'}
+    ]
+  },
+  {
+    id:'cost-plan-outturn',
+    sector:'cp',
+    sectorLabel:'Cost Planning & Estimating',
+    title:'Elemental Cost Plan vs Outturn Agent',
+    description:'Track the accuracy of elemental cost plans against actual outturn costs at completion to understand where estimates systematically drift. ClickHouse holds historic cost plans and final accounts across the portfolio, letting AI agents quantify accuracy by element, project type, and stage of design.',
+    schema:`-- Cost Plan vs Outturn Schema
+CREATE TABLE projects (
+    project_id       String,
+    project_name     String,
+    project_type     LowCardinality(String),
+    gifa_m2          Decimal(10,2),
+    region           LowCardinality(String),
+    procurement_route LowCardinality(String),
+    start_date       Date,
+    completion_date  Nullable(Date)
+) ENGINE = ReplacingMergeTree()
+ORDER BY project_id;
+
+CREATE TABLE cost_plans (
+    cost_plan_id     UUID,
+    project_id       String,
+    stage            Enum8('RIBA2'=2,'RIBA3'=3,'RIBA4'=4,'TENDER'=5),
+    element_code     LowCardinality(String),
+    element_name     LowCardinality(String),
+    plan_value       Decimal(14,2),
+    plan_rate_per_m2 Decimal(10,2),
+    plan_date        Date
+) ENGINE = MergeTree()
+ORDER BY (project_id, stage, element_code);
+
+CREATE TABLE outturn_costs (
+    project_id       String,
+    element_code     LowCardinality(String),
+    actual_value     Decimal(14,2),
+    actual_rate_per_m2 Decimal(10,2),
+    final_account_date Date
+) ENGINE = ReplacingMergeTree(final_account_date)
+ORDER BY (project_id, element_code);`,
+    sampleData:`-- Projects
+INSERT INTO projects VALUES
+('PRJ-0954', 'Cannon Street Office', 'Commercial Office', 9850.00, 'London',     'Two-Stage D&B', '2023-04-01', '2024-11-20'),
+('PRJ-0982', 'Salford Sixth Form',   'Education',         4200.00, 'North West', 'JCT D&B',       '2023-09-15', '2024-12-05'),
+('PRJ-1003', 'Reading Apartments',   'Residential',       7100.00, 'South East', 'NEC4 Option C', '2024-01-10', NULL);
+
+-- Cost plans (RIBA 4 stage)
+INSERT INTO cost_plans VALUES
+(generateUUIDv4(), 'PRJ-0954', 4, '2.1', 'Frame',          3450000.00, 350.25, '2023-02-10'),
+(generateUUIDv4(), 'PRJ-0954', 4, '2.2', 'Upper Floors',   1820000.00, 184.77, '2023-02-10'),
+(generateUUIDv4(), 'PRJ-0954', 4, '2.3', 'Roof',            980000.00,  99.49, '2023-02-10'),
+(generateUUIDv4(), 'PRJ-0954', 4, '5.0', 'Services',       5600000.00, 568.53, '2023-02-10'),
+(generateUUIDv4(), 'PRJ-0982', 4, '2.1', 'Frame',          1180000.00, 280.95, '2023-08-01'),
+(generateUUIDv4(), 'PRJ-0982', 4, '5.0', 'Services',       1950000.00, 464.29, '2023-08-01');
+
+-- Outturn
+INSERT INTO outturn_costs VALUES
+('PRJ-0954', '2.1', 3612000.00, 366.70, '2024-12-15'),
+('PRJ-0954', '2.2', 1865000.00, 189.34, '2024-12-15'),
+('PRJ-0954', '2.3',  942000.00,  95.63, '2024-12-15'),
+('PRJ-0954', '5.0', 6240000.00, 633.50, '2024-12-15'),
+('PRJ-0982', '2.1', 1218000.00, 290.00, '2025-01-10'),
+('PRJ-0982', '5.0', 2240000.00, 533.33, '2025-01-10');`,
+    qanda:[
+      {q:'Which elements consistently overrun their RIBA 4 cost plan?',
+       a:'Join cost_plans where stage = \'RIBA4\' to outturn_costs on project_id and element_code, compute (actual_value - plan_value)/plan_value per element, and average across projects. The agent surfaces elements (typically Services or Externals) where the estimating model is biased low.'},
+      {q:'What is the cost plan accuracy by project type?',
+       a:'Aggregate the absolute deviation between plan_value and actual_value as a percentage, grouped by projects.project_type. The agent reports mean accuracy bands and identifies whether commercial or residential schemes are easier to forecast.'},
+      {q:'Show the £/m2 drift for Services across the last five completed projects',
+       a:'Filter cost_plans for element_code = \'5.0\' and join to outturn_costs and projects, computing the difference in rate_per_m2. The agent presents a trend showing whether services inflation is being captured in newer plans.'},
+      {q:'Compare cost plan accuracy at RIBA 2 versus RIBA 4 for the same projects',
+       a:'For each project_id with multiple stages in cost_plans, join to outturn_costs and compute deviation per stage. The agent quantifies how much accuracy improves with design maturity, useful for setting contingency at early stages.'},
+      {q:'Identify the largest single-element overruns in absolute pounds last year',
+       a:'Compute (actual_value - plan_value) joined to projects with completion_date in the past 12 months, sort descending. The agent surfaces the elements that hurt the portfolio most in monetary terms, beyond percentage drift.'},
+      {q:'What if we benchmarked all new offices on the median £/m2 of recently completed ones?',
+       a:'Compute median outturn rate_per_m2 by element for project_type = \'Commercial Office\' completed in the last 24 months, then simulate a fresh cost plan against the same GIFA. The agent produces a calibrated baseline and shows expected total versus current plan.'},
+      {q:'Where is procurement route influencing cost plan accuracy?',
+       a:'Group deviation metrics by projects.procurement_route. The agent can show whether NEC Option C jobs drift more than JCT D&B and use that to inform contingency by route at the next gate.'},
+      {q:'Highlight projects where total outturn is within 2% of cost plan',
+       a:'Aggregate plan_value and actual_value per project_id and filter where absolute deviation is below 2%. The agent presents the well-controlled jobs so the team can extract patterns about what worked.'}
+    ]
+  },
+  {
+    id:'boq-rate-analysis',
+    sector:'qs',
+    sectorLabel:'Quantity Surveying',
+    title:'Bill of Quantities Rate Analysis Agent',
+    description:'Compare planned BOQ unit rates against actual installed rates derived from valuations and remeasurement to surface margin slippage and pricing errors. ClickHouse stores BOQ items, valuations, and labour returns across multiple projects, enabling AI agents to interrogate rate performance at line-item resolution.',
+    schema:`-- BOQ Rate Analysis Schema
+CREATE TABLE boq_items (
+    project_id       String,
+    item_ref         String,
+    section          LowCardinality(String),
+    description      String,
+    unit             LowCardinality(String),
+    boq_qty          Decimal(14,3),
+    boq_rate         Decimal(14,4),
+    boq_total        Decimal(14,2)
+) ENGINE = MergeTree()
+ORDER BY (project_id, section, item_ref);
+
+CREATE TABLE valuations (
+    valuation_id     UUID,
+    project_id       String,
+    item_ref         String,
+    valuation_no     UInt16,
+    period_end       Date,
+    measured_qty     Decimal(14,3),
+    certified_value  Decimal(14,2),
+    certified_rate   Decimal(14,4)
+) ENGINE = MergeTree()
+ORDER BY (project_id, valuation_no, item_ref);
+
+CREATE TABLE actual_costs (
+    project_id       String,
+    item_ref         String,
+    cost_type        Enum8('LABOUR'=1,'MATERIAL'=2,'PLANT'=3,'SUBBIE'=4),
+    cost_value       Decimal(14,2),
+    posted_date      Date
+) ENGINE = MergeTree()
+ORDER BY (project_id, item_ref, posted_date);`,
+    sampleData:`-- BOQ items
+INSERT INTO boq_items VALUES
+('PRJ-1042', 'D20-101', 'Substructure',   'Excavation in firm clay',         'm3', 1250.000,   18.5000,  23125.00),
+('PRJ-1042', 'E10-204', 'Concrete',       'C32/40 to ground beams',          'm3',  340.000,  152.0000,  51680.00),
+('PRJ-1042', 'F30-310', 'Masonry',        'Facing brickwork 102.5mm',        'm2', 1800.000,   95.5000, 171900.00),
+('PRJ-1042', 'M40-122', 'Finishes',       'Suspended ceiling tile system',   'm2', 4200.000,   42.7500, 179550.00);
+
+-- Valuations (cumulative measured qty per period)
+INSERT INTO valuations VALUES
+(generateUUIDv4(), 'PRJ-1042', 'D20-101', 6, '2025-09-30', 1250.000,  23125.00,  18.5000),
+(generateUUIDv4(), 'PRJ-1042', 'E10-204', 6, '2025-09-30',  340.000,  51680.00, 152.0000),
+(generateUUIDv4(), 'PRJ-1042', 'F30-310', 6, '2025-09-30', 1620.000, 154710.00,  95.5000),
+(generateUUIDv4(), 'PRJ-1042', 'M40-122', 6, '2025-09-30', 2100.000,  89775.00,  42.7500);
+
+-- Actuals
+INSERT INTO actual_costs VALUES
+('PRJ-1042', 'D20-101', 1, 14200.00, '2025-09-25'),
+('PRJ-1042', 'D20-101', 3,  6800.00, '2025-09-25'),
+('PRJ-1042', 'E10-204', 2, 41200.00, '2025-09-28'),
+('PRJ-1042', 'E10-204', 1, 12400.00, '2025-09-28'),
+('PRJ-1042', 'F30-310', 4,148500.00, '2025-09-29'),
+('PRJ-1042', 'M40-122', 4, 78200.00, '2025-09-30');`,
+    qanda:[
+      {q:'Which BOQ items are running at a loss on PRJ-1042?',
+       a:'Join valuations to actual_costs on project_id and item_ref, sum cost_value and compare against certified_value. The agent ranks items where total actuals exceed certifications and presents the loss in absolute pounds and as a margin percentage.'},
+      {q:'Show the gap between BOQ rates and effective installed rates by section',
+       a:'Compute effective_rate = SUM(actual_costs.cost_value)/SUM(valuations.measured_qty) grouped by section through boq_items. The agent shows margin compression by trade section, useful for the QS commentary.'},
+      {q:'Which items show measured quantities materially exceeding the original BOQ?',
+       a:'Compare valuations.measured_qty against boq_items.boq_qty per item_ref. The agent flags overmeasure exposure and the financial impact at the certified_rate, prompting remeasurement or variation conversations.'},
+      {q:'Highlight items where labour is dominating cost but BOQ rate was set on a balanced split',
+       a:'Aggregate actual_costs by cost_type per item_ref and compute the labour share. The agent flags items where labour exceeds the typical proportion baked into the BOQ rate, hinting at productivity or scope issues.'},
+      {q:'What is the cash margin earned on the masonry package to date?',
+       a:'Filter valuations and actual_costs for items in section = \'Masonry\', sum certified_value minus cost_value. The agent presents trade-level margin with the rate trend across valuations.'},
+      {q:'What if we re-rated the suspended ceiling item to reflect current actuals — what is the contract effect?',
+       a:'Calculate proposed_rate = SUM(cost_value)/SUM(measured_qty) for M40-122, apply to remaining boq_qty, and compare to original boq_total. The agent estimates the residual margin under the revised rate to support a recovery plan.'},
+      {q:'Identify items where the certified rate has drifted between valuations',
+       a:'Group valuations by item_ref and track certified_rate across valuation_no. The agent flags inconsistencies that may indicate posting errors or unauthorised rate changes between certificates.'},
+      {q:'Which items have the highest variance from BOQ to actual unit cost?',
+       a:'Compute (effective_actual_rate - boq_rate)/boq_rate per item_ref. The agent ranks items by variance and supports root cause workshops on the worst performers.'}
+    ]
+  },
+  {
+    id:'variations-tracking',
+    sector:'qs',
+    sectorLabel:'Quantity Surveying',
+    title:'Variation & Change Order Tracking Agent',
+    description:'Track architect instructions, compensation events, and contractor claims through their lifecycle to manage value impact and entitlement risk. ClickHouse stores instructions, quotations, and assessed values, letting AI agents analyse variation patterns by cause, originator, and outcome across the project.',
+    schema:`-- Variations Tracking Schema
+CREATE TABLE instructions (
+    instruction_id   String,
+    project_id       String,
+    issued_date      Date,
+    originator       LowCardinality(String),
+    cause            Enum8('DESIGN_CHANGE'=1,'CLIENT_CHANGE'=2,'STATUTORY'=3,'SITE_CONDITION'=4,'OMISSION'=5,'ERROR'=6),
+    description      String,
+    status           Enum8('ISSUED'=1,'QUOTED'=2,'AGREED'=3,'REJECTED'=4,'IN_DISPUTE'=5)
+) ENGINE = MergeTree()
+ORDER BY (project_id, issued_date);
+
+CREATE TABLE compensation_events (
+    ce_id            String,
+    project_id       String,
+    instruction_id   Nullable(String),
+    notified_date    Date,
+    quote_due        Date,
+    quote_received   Nullable(Date),
+    quoted_value     Nullable(Decimal(14,2)),
+    assessed_value   Nullable(Decimal(14,2)),
+    time_impact_days Int16,
+    status           Enum8('NOTIFIED'=1,'QUOTED'=2,'IMPLEMENTED'=3,'REJECTED'=4)
+) ENGINE = MergeTree()
+ORDER BY (project_id, notified_date);
+
+CREATE TABLE variation_movements (
+    move_id          UUID,
+    ce_id            String,
+    movement_date    Date,
+    movement_value   Decimal(14,2),
+    movement_type    Enum8('QUOTE'=1,'REVISED_QUOTE'=2,'ASSESSMENT'=3,'AGREED'=4)
+) ENGINE = MergeTree()
+ORDER BY (ce_id, movement_date);`,
+    sampleData:`-- Instructions
+INSERT INTO instructions VALUES
+('AI-0142', 'PRJ-1042', '2025-08-15', 'Architect',     1, 'Revised cladding specification to anodised finish', 3),
+('AI-0156', 'PRJ-1042', '2025-09-02', 'Client',        2, 'Additional EV charging bays in basement',           2),
+('AI-0163', 'PRJ-1042', '2025-09-12', 'Engineer',      4, 'Encountered obstruction during piling',             3),
+('AI-0171', 'PRJ-1042', '2025-09-22', 'Architect',     6, 'Coordination error between MEP and ceiling layout', 5);
+
+-- Compensation events
+INSERT INTO compensation_events VALUES
+('CE-101', 'PRJ-1042', 'AI-0142', '2025-08-16', '2025-08-30', '2025-08-29', 184500.00, 162000.00, 7,  3),
+('CE-104', 'PRJ-1042', 'AI-0156', '2025-09-03', '2025-09-17', '2025-09-18',  92400.00,  88200.00, 0,  3),
+('CE-108', 'PRJ-1042', 'AI-0163', '2025-09-13', '2025-09-27', '2025-09-26', 215800.00, NULL,      14, 5),
+('CE-112', 'PRJ-1042', 'AI-0171', '2025-09-23', '2025-10-07', NULL,         NULL,      NULL,       0, 1);
+
+-- Variation movements
+INSERT INTO variation_movements VALUES
+(generateUUIDv4(), 'CE-101', '2025-08-29', 184500.00, 1),
+(generateUUIDv4(), 'CE-101', '2025-09-05', 168700.00, 2),
+(generateUUIDv4(), 'CE-101', '2025-09-12', 162000.00, 4),
+(generateUUIDv4(), 'CE-108', '2025-09-26', 215800.00, 1);`,
+    qanda:[
+      {q:'What is our total exposure on open compensation events for PRJ-1042?',
+       a:'Filter compensation_events where status IN (\'NOTIFIED\',\'QUOTED\',\'REJECTED\') and sum COALESCE(quoted_value, 0). The agent presents total exposure split by status and highlights events still missing a quotation.'},
+      {q:'Break down agreed variation value by cause this year',
+       a:'Join compensation_events to instructions on instruction_id, filter for status = \'IMPLEMENTED\', and group by cause summing assessed_value. The agent shows whether design changes or site conditions are the dominant cost driver.'},
+      {q:'Which compensation events are overdue for quotation?',
+       a:'Filter compensation_events where quote_received IS NULL AND quote_due < today() AND status = \'NOTIFIED\'. The agent produces an aged list with elapsed days, useful for chasing contractors at the cost report meeting.'},
+      {q:'Show how quoted values have shifted before final agreement',
+       a:'For each ce_id, order variation_movements by movement_date and compare QUOTE to AGREED values. The agent calculates negotiation savings and highlights events where the assessed value diverged significantly from the quote.'},
+      {q:'Which originator is generating the most variation value?',
+       a:'Join compensation_events to instructions and aggregate assessed_value by originator. The agent reports on whether the architect, engineer, or client is driving change, which supports lessons-learned conversations.'},
+      {q:'What is the average time from instruction to agreement?',
+       a:'Compute dateDiff(\'day\', instructions.issued_date, compensation_events.movement_date for AGREED) joined through ce_id. The agent reports the average and identifies events sitting outside the contractual quotation period.'},
+      {q:'What if all in-dispute compensation events were assessed at 50% of the quoted value?',
+       a:'Filter compensation_events where status = \'IN_DISPUTE\', take quoted_value * 0.5 as proxy_assessed, and sum into the cost report. The agent presents a sensitised final account forecast for the monthly board update.'},
+      {q:'Identify clusters of variations that point to a coordination problem',
+       a:'Filter instructions where cause IN (\'ERROR\',\'DESIGN_CHANGE\') and bucket issued_date into weeks, then count and value the instructions. The agent surfaces weeks where coordination failures spiked and ties them to the elements affected.'}
+    ]
+  },
+  {
+    id:'earned-value',
+    sector:'pm',
+    sectorLabel:'Project Controls',
+    title:'Earned Value Management Agent',
+    description:'Calculate SPI and CPI by WBS element to assess schedule and cost performance and forecast outturn at completion. ClickHouse stores baselines, progress measurements, and actual costs at fine granularity, allowing AI agents to roll up EVM metrics across any WBS slice on demand.',
+    schema:`-- EVM Schema
+CREATE TABLE wbs (
+    wbs_id           String,
+    project_id       String,
+    parent_wbs       Nullable(String),
+    wbs_name         String,
+    level            UInt8,
+    discipline       LowCardinality(String)
+) ENGINE = ReplacingMergeTree()
+ORDER BY (project_id, wbs_id);
+
+CREATE TABLE baseline (
+    project_id       String,
+    wbs_id           String,
+    period_end       Date,
+    bcws             Decimal(14,2),
+    bac              Decimal(14,2)
+) ENGINE = MergeTree()
+ORDER BY (project_id, wbs_id, period_end);
+
+CREATE TABLE progress (
+    project_id       String,
+    wbs_id           String,
+    period_end       Date,
+    percent_complete Decimal(5,2),
+    bcwp             Decimal(14,2)
+) ENGINE = MergeTree()
+ORDER BY (project_id, wbs_id, period_end);
+
+CREATE TABLE actuals (
+    project_id       String,
+    wbs_id           String,
+    period_end       Date,
+    acwp             Decimal(14,2),
+    committed        Decimal(14,2)
+) ENGINE = MergeTree()
+ORDER BY (project_id, wbs_id, period_end);`,
+    sampleData:`-- WBS
+INSERT INTO wbs VALUES
+('1',     'PRJ-1042', NULL,  'PRJ-1042 Whole Project',     1, 'All'),
+('1.1',   'PRJ-1042', '1',   'Substructure',               2, 'Civils'),
+('1.2',   'PRJ-1042', '1',   'Superstructure',             2, 'Frame'),
+('1.3',   'PRJ-1042', '1',   'MEP Services',               2, 'MEP');
+
+-- Baseline (cumulative)
+INSERT INTO baseline VALUES
+('PRJ-1042', '1.1', '2025-09-30', 1850000.00, 2100000.00),
+('PRJ-1042', '1.2', '2025-09-30', 2400000.00, 4200000.00),
+('PRJ-1042', '1.3', '2025-09-30',  920000.00, 5600000.00);
+
+-- Progress
+INSERT INTO progress VALUES
+('PRJ-1042', '1.1', '2025-09-30',  92.50, 1942500.00),
+('PRJ-1042', '1.2', '2025-09-30',  48.00, 2016000.00),
+('PRJ-1042', '1.3', '2025-09-30',  14.00,  784000.00);
+
+-- Actuals
+INSERT INTO actuals VALUES
+('PRJ-1042', '1.1', '2025-09-30', 2085000.00, 2110000.00),
+('PRJ-1042', '1.2', '2025-09-30', 2250000.00, 4380000.00),
+('PRJ-1042', '1.3', '2025-09-30',  860000.00, 1100000.00);`,
+    qanda:[
+      {q:'What is the project-level SPI and CPI at the latest period?',
+       a:'Aggregate baseline.bcws, progress.bcwp, and actuals.acwp across all WBS for the most recent period_end, then compute SPI = SUM(bcwp)/SUM(bcws) and CPI = SUM(bcwp)/SUM(acwp). The agent reports the headline metrics with a one-line interpretation.'},
+      {q:'Which WBS elements have a CPI below 0.9?',
+       a:'For the latest period, compute CPI per wbs_id and filter where result < 0.9. The agent ranks underperformers and joins to wbs to label them by discipline, focusing project controls attention on the worst.'},
+      {q:'Show the trend of SPI over the last six months',
+       a:'Group baseline and progress by period_end across the last six monthly snapshots and compute SPI per period. The agent presents the trajectory and notes whether the project is improving or deteriorating in schedule terms.'},
+      {q:'Forecast Estimate at Completion (EAC) using current CPI',
+       a:'Compute EAC = baseline.bac / CPI for each WBS, then sum to project level. The agent presents the EAC alongside BAC and Variance at Completion (VAC) for the cost report.'},
+      {q:'Which discipline has the largest cost variance?',
+       a:'Compute CV = bcwp - acwp per wbs_id, join to wbs.discipline, and aggregate. The agent ranks disciplines and reports the absolute pound variance to support root-cause analysis.'},
+      {q:'What if CPI improved to 1.0 from the next period onwards — what would the EAC look like?',
+       a:'Calculate EAC = ACWP + (BAC - BCWP) for each WBS, applying a CPI of 1.0 to the remaining work. The agent compares this recovery scenario against the trajectory EAC and quantifies the value of the planned recovery.'},
+      {q:'Which WBS elements are ahead of plan but spending faster than expected?',
+       a:'Filter WBS where SPI > 1.0 AND CPI < 1.0 in the latest period. The agent flags work that is being accelerated at a cost premium and helps managers decide whether to deliberately slow it down.'},
+      {q:'Compare planned versus actual percentage complete by discipline',
+       a:'Compute planned_pct = bcws/bac and actual_pct = bcwp/bac per wbs_id, join to wbs.discipline, and aggregate. The agent presents a discipline-level dashboard showing where physical progress is lagging the curve.'}
+    ]
+  },
+  {
+    id:'project-cash-flow',
+    sector:'pm',
+    sectorLabel:'Project Controls',
+    title:'Project Cash Flow & S-Curve Agent',
+    description:'Compare planned versus actual cumulative spend across the project lifecycle and forecast monthly drawdown. ClickHouse stores valuation history, cost commitments, and payment schedules, allowing AI agents to produce S-curves, identify drawdown shortfalls, and project lender funding requirements.',
+    schema:`-- Cash Flow Schema
+CREATE TABLE cash_flow_plan (
+    project_id       String,
+    period           Date,
+    planned_spend    Decimal(14,2),
+    planned_cumulative Decimal(14,2),
+    plan_version     UInt16,
+    plan_date        Date
+) ENGINE = ReplacingMergeTree(plan_date)
+ORDER BY (project_id, period, plan_version);
+
+CREATE TABLE valuations_cashflow (
+    project_id       String,
+    valuation_no     UInt16,
+    period_end       Date,
+    gross_valuation  Decimal(14,2),
+    retention        Decimal(14,2),
+    net_payable      Decimal(14,2),
+    cert_date        Date,
+    due_date         Date,
+    paid_date        Nullable(Date)
+) ENGINE = MergeTree()
+ORDER BY (project_id, valuation_no);
+
+CREATE TABLE commitments (
+    project_id       String,
+    commitment_ref   String,
+    supplier_id      String,
+    committed_value  Decimal(14,2),
+    expected_period  Date,
+    status           Enum8('OPEN'=1,'PARTIAL'=2,'COMPLETE'=3)
+) ENGINE = MergeTree()
+ORDER BY (project_id, expected_period);`,
+    sampleData:`-- Cash flow plan
+INSERT INTO cash_flow_plan VALUES
+('PRJ-1042', '2025-07-31',  450000.00,   450000.00, 1, '2025-04-01'),
+('PRJ-1042', '2025-08-31',  820000.00,  1270000.00, 1, '2025-04-01'),
+('PRJ-1042', '2025-09-30', 1450000.00,  2720000.00, 1, '2025-04-01'),
+('PRJ-1042', '2025-10-31', 2100000.00,  4820000.00, 1, '2025-04-01'),
+('PRJ-1042', '2025-11-30', 2350000.00,  7170000.00, 1, '2025-04-01');
+
+-- Valuations
+INSERT INTO valuations_cashflow VALUES
+('PRJ-1042', 4, '2025-07-31',  482000.00, 24100.00,  457900.00, '2025-08-05', '2025-08-19', '2025-08-22'),
+('PRJ-1042', 5, '2025-08-31',  878000.00, 43900.00,  834100.00, '2025-09-05', '2025-09-19', '2025-09-25'),
+('PRJ-1042', 6, '2025-09-30', 1320000.00, 66000.00, 1254000.00, '2025-10-05', '2025-10-19',  NULL);
+
+-- Commitments
+INSERT INTO commitments VALUES
+('PRJ-1042', 'PO-2201', 'SUB-014', 1850000.00, '2025-10-31', 2),
+('PRJ-1042', 'PO-2245', 'SUB-022',  640000.00, '2025-11-30', 1),
+('PRJ-1042', 'PO-2298', 'SUB-031',  920000.00, '2025-12-31', 1);`,
+    qanda:[
+      {q:'Plot the planned versus actual cumulative spend on PRJ-1042',
+       a:'Aggregate cash_flow_plan.planned_cumulative by period and join to a running sum of valuations_cashflow.gross_valuation by period_end. The agent returns a paired S-curve and quantifies the variance at the latest period.'},
+      {q:'What is our drawdown shortfall against plan for September?',
+       a:'Compare valuations_cashflow.gross_valuation for period_end = \'2025-09-30\' with cash_flow_plan.planned_spend for the same period. The agent reports the £ shortfall and computes the percentage variance from plan.'},
+      {q:'Forecast monthly cash requirement for the next six months based on commitments',
+       a:'Sum commitments.committed_value by expected_period for the next six months, blended with cash_flow_plan figures. The agent produces a forward funding profile to brief the project sponsor or lender.'},
+      {q:'Which valuations are overdue for payment?',
+       a:'Filter valuations_cashflow where paid_date IS NULL AND due_date < today(). The agent reports the aged payment list and aggregates the cash impact of the overdue receipts.'},
+      {q:'What if the project is delayed by two months — how does the cash curve shift?',
+       a:'Re-bucket cash_flow_plan periods by adding two months and recompute the cumulative curve. The agent presents the shifted drawdown profile and quantifies the additional working capital required.'},
+      {q:'Show retention balances held to date',
+       a:'Sum valuations_cashflow.retention across all valuations to date by project_id. The agent reports the held retention and projects expected release dates against the contract conditions.'},
+      {q:'Identify months where actual outpaces planned spend by more than 15%',
+       a:'Compute the variance between gross_valuation and planned_spend per period and filter for >15% upside. The agent surfaces accelerated months and points to the commitments driving the over-spend.'},
+      {q:'What if a major commitment slipped by one period — what is the cash relief?',
+       a:'Pick the largest open commitment, move expected_period forward by one month, and recompute the upcoming spend. The agent presents the working-capital saving and any knock-on impact on the S-curve.'}
+    ]
+  },
+  {
+    id:'material-cost-tracking',
+    sector:'pro',
+    sectorLabel:'Procurement & Supply',
+    title:'Material Cost Tracking & Inflation Agent',
+    description:'Track supplier prices on key construction materials against published indices to quantify escalation exposure and forecast price movements. ClickHouse stores supplier quotes, purchase order history, and BCIS-style indices, letting AI agents detect inflation pockets and recommend lock-in strategies.',
+    schema:`-- Material Cost Tracking Schema
+CREATE TABLE material_quotes (
+    quote_id         UUID,
+    material_code    LowCardinality(String),
+    material_name    String,
+    supplier_id      String,
+    unit             LowCardinality(String),
+    unit_price       Decimal(14,4),
+    valid_from       Date,
+    valid_to         Date,
+    region           LowCardinality(String),
+    received_date    Date
+) ENGINE = MergeTree()
+ORDER BY (material_code, received_date);
+
+CREATE TABLE purchase_orders (
+    po_id            String,
+    project_id       String,
+    material_code    LowCardinality(String),
+    supplier_id      String,
+    order_date       Date,
+    quantity         Decimal(14,3),
+    unit_price       Decimal(14,4),
+    line_total       Decimal(14,2),
+    delivery_date    Date
+) ENGINE = MergeTree()
+ORDER BY (order_date, material_code);
+
+CREATE TABLE price_index (
+    index_name       LowCardinality(String),
+    material_code    LowCardinality(String),
+    period           Date,
+    index_value      Decimal(8,2)
+) ENGINE = ReplacingMergeTree()
+ORDER BY (index_name, material_code, period);`,
+    sampleData:`-- Quotes
+INSERT INTO material_quotes VALUES
+(generateUUIDv4(), 'STL-REB-B500', 'Rebar B500B 16mm', 'SUP-101', 't', 1120.0000, '2025-09-01', '2025-09-30', 'London', '2025-08-25'),
+(generateUUIDv4(), 'STL-REB-B500', 'Rebar B500B 16mm', 'SUP-101', 't', 1185.0000, '2025-10-01', '2025-10-31', 'London', '2025-09-26'),
+(generateUUIDv4(), 'STL-REB-B500', 'Rebar B500B 16mm', 'SUP-104', 't', 1162.5000, '2025-10-01', '2025-10-31', 'London', '2025-09-28'),
+(generateUUIDv4(), 'CON-RDM-C40', 'Ready-mix C32/40', 'SUP-201', 'm3', 148.0000, '2025-10-01', '2025-12-31', 'London', '2025-09-20');
+
+-- POs
+INSERT INTO purchase_orders VALUES
+('PO-3001', 'PRJ-1042', 'STL-REB-B500', 'SUP-101', '2025-09-05',  18.500, 1120.0000,  20720.00, '2025-09-19'),
+('PO-3014', 'PRJ-1042', 'STL-REB-B500', 'SUP-104', '2025-10-04',  22.300, 1162.5000,  25923.75, '2025-10-18'),
+('PO-3018', 'PRJ-1042', 'CON-RDM-C40',  'SUP-201', '2025-10-08', 420.000,  148.0000,  62160.00, '2025-10-15');
+
+-- Index
+INSERT INTO price_index VALUES
+('BCIS-STEEL', 'STL-REB-B500', '2025-07-01', 168.40),
+('BCIS-STEEL', 'STL-REB-B500', '2025-08-01', 170.10),
+('BCIS-STEEL', 'STL-REB-B500', '2025-09-01', 172.85),
+('BCIS-STEEL', 'STL-REB-B500', '2025-10-01', 175.40),
+('BCIS-CONCRETE', 'CON-RDM-C40', '2025-10-01', 142.20);`,
+    qanda:[
+      {q:'How much has rebar pricing risen over the last six months?',
+       a:'Aggregate material_quotes for material_code = \'STL-REB-B500\' by month, taking median unit_price, then compute period-on-period change. The agent reports the cumulative inflation and compares it to BCIS steel index movement from price_index.'},
+      {q:'Which materials are running ahead of their published index?',
+       a:'For each material_code compute the percentage change in purchase_orders.unit_price and compare against the matching price_index series. The agent flags materials where our prices are escalating faster than the market.'},
+      {q:'Compare supplier pricing for rebar in October',
+       a:'Filter material_quotes where material_code = \'STL-REB-B500\' AND valid_from = \'2025-10-01\' and rank by unit_price. The agent presents a quick supplier league table to inform the next call-off.'},
+      {q:'Forecast our concrete spend exposure for the next quarter',
+       a:'Project quantities from outstanding commitments at the latest material_quotes.unit_price for CON-RDM-C40, then apply the latest BCIS index trend. The agent reports a base, low, and high spend scenario.'},
+      {q:'What if steel inflation continues at 1.5% per month — what is the budget overrun risk?',
+       a:'Apply a 1.5% monthly compound increase to material_quotes.unit_price across remaining rebar quantities. The agent reports the additional cost to outturn versus current tender allowances.'},
+      {q:'Show our annual spend by material category',
+       a:'Aggregate purchase_orders.line_total by material_code over the trailing 12 months and group into category buckets. The agent presents the spend concentration to inform category management priorities.'},
+      {q:'Which suppliers have offered the longest validity periods on their quotes?',
+       a:'Compute dateDiff(\'day\', valid_from, valid_to) from material_quotes grouped by supplier_id. The agent surfaces suppliers willing to lock in price, useful when escalation is a concern.'},
+      {q:'What if we hedged 70% of our rebar requirement at the current price?',
+       a:'Take 70% of forecast rebar quantity at the current best material_quotes.unit_price and project the residual 30% at a forecast inflation curve. The agent quantifies the cost certainty achieved versus the opportunity cost if prices fall.'}
+    ]
+  },
+  {
+    id:'subcontractor-performance',
+    sector:'pro',
+    sectorLabel:'Procurement & Supply',
+    title:'Subcontractor Performance Agent',
+    description:'Score subcontractors on productivity, on-time delivery, defect rates, and payment performance to inform award decisions and risk reviews. ClickHouse stores granular sub-package activity across projects, enabling AI agents to compare contractors objectively and explain why a given firm ranks where it does.',
+    schema:`-- Subcontractor Performance Schema
+CREATE TABLE subcontractors (
+    contractor_id    String,
+    contractor_name  String,
+    trade            LowCardinality(String),
+    psl_status       Enum8('APPROVED'=1,'WATCH'=2,'SUSPENDED'=3),
+    onboarded_date   Date
+) ENGINE = ReplacingMergeTree()
+ORDER BY contractor_id;
+
+CREATE TABLE package_performance (
+    package_id       String,
+    project_id       String,
+    contractor_id    String,
+    package_value    Decimal(14,2),
+    planned_start    Date,
+    actual_start     Date,
+    planned_finish   Date,
+    actual_finish    Nullable(Date),
+    productivity_idx Decimal(5,2),
+    defect_count     UInt16,
+    ncrs_raised      UInt16
+) ENGINE = MergeTree()
+ORDER BY (project_id, contractor_id, package_id);
+
+CREATE TABLE payment_history (
+    payment_id       UUID,
+    contractor_id    String,
+    project_id       String,
+    cert_date        Date,
+    due_date         Date,
+    paid_date        Date,
+    paid_amount      Decimal(14,2)
+) ENGINE = MergeTree()
+ORDER BY (contractor_id, cert_date);`,
+    sampleData:`-- Subcontractors
+INSERT INTO subcontractors VALUES
+('SUB-014', 'Northgate Steelwork Ltd',  'Steel Frame',   1, '2021-03-10'),
+('SUB-022', 'Apex Cladding Services',   'Cladding',      2, '2022-06-15'),
+('SUB-031', 'Stratton MEP',             'MEP',           1, '2020-09-01'),
+('SUB-044', 'BrickWise Masonry',        'Brickwork',     1, '2023-02-20');
+
+-- Package performance
+INSERT INTO package_performance VALUES
+('PKG-201', 'PRJ-1042', 'SUB-014', 1850000.00, '2025-05-01', '2025-05-03', '2025-08-30', '2025-09-12', 0.94,  4, 1),
+('PKG-204', 'PRJ-1042', 'SUB-022',  920000.00, '2025-07-15', '2025-07-28', '2025-11-30',  NULL,        0.81, 12, 3),
+('PKG-208', 'PRJ-1042', 'SUB-031', 5600000.00, '2025-06-01', '2025-06-05', '2026-02-28',  NULL,        0.97,  2, 0),
+('PKG-211', 'PRJ-1042', 'SUB-044',  410000.00, '2025-08-01', '2025-08-02', '2025-10-30', '2025-10-25', 1.03,  1, 0);
+
+-- Payments
+INSERT INTO payment_history VALUES
+(generateUUIDv4(), 'SUB-014', 'PRJ-1042', '2025-08-05', '2025-08-19', '2025-08-22', 462000.00),
+(generateUUIDv4(), 'SUB-022', 'PRJ-1042', '2025-08-05', '2025-08-19', '2025-08-28', 184000.00),
+(generateUUIDv4(), 'SUB-031', 'PRJ-1042', '2025-09-05', '2025-09-19', '2025-09-23', 980000.00);`,
+    qanda:[
+      {q:'Rank subcontractors by overall performance score',
+       a:'Compute a weighted score per contractor_id combining average productivity_idx, on-time finish rate, defect rate per £m of package_value, and payment lateness. The agent presents the ranked league table with the underlying components broken out.'},
+      {q:'Which subcontractors have a productivity index below 0.9?',
+       a:'Filter package_performance where productivity_idx < 0.9 and join to subcontractors to label trade and PSL status. The agent reports the underperformers and shows whether the issue is concentrated in one trade.'},
+      {q:'Compare on-time finish rates between steel and cladding packages',
+       a:'For packages with non-null actual_finish, compute the proportion where actual_finish <= planned_finish, grouped by trade. The agent compares delivery reliability between trades to inform package strategy.'},
+      {q:'Show defect counts per £1m of package value by contractor',
+       a:'Compute SUM(defect_count) / SUM(package_value/1000000) grouped by contractor_id. The agent normalises quality performance by package size and ranks contractors fairly across small and large packages.'},
+      {q:'Which subcontractors are we paying late?',
+       a:'Compute dateDiff(\'day\', due_date, paid_date) per payment and average by contractor_id. The agent flags consistently late payments to internal AP and supports cash-flow discussions with finance.'},
+      {q:'Identify subcontractors on the watch list with active packages',
+       a:'Filter subcontractors for psl_status = \'WATCH\' and join to package_performance where actual_finish IS NULL. The agent presents the active risk exposure to procurement governance.'},
+      {q:'What if we removed SUB-022 from the PSL — what alternative cladding contractors do we have?',
+       a:'Filter subcontractors for trade = \'Cladding\' AND psl_status = \'APPROVED\' AND contractor_id != \'SUB-022\', then compare past package_performance metrics. The agent helps select a replacement and quantifies the performance impact.'},
+      {q:'Compare performance across projects for our top three steel subcontractors',
+       a:'Aggregate package_performance for trade = \'Steel Frame\' by contractor_id and project_id, computing productivity, on-time rate, and defects. The agent presents a multi-project comparison to support framework agreement discussions.'}
+    ]
+  },
+  {
+    id:'hse-incidents',
+    sector:'hse',
+    sectorLabel:'Safety & Quality',
+    title:'HSE Incident & Near-Miss Agent',
+    description:'Analyse safety incidents, near-misses, and RIDDOR-reportable events to identify trends, root causes, and high-risk activities. ClickHouse stores incident reports, observations, and toolbox talks at site level, allowing AI agents to surface emerging hazards and support behavioural safety programmes.',
+    schema:`-- HSE Schema
+CREATE TABLE incidents (
+    incident_id      UUID,
+    project_id       String,
+    site_id          String,
+    occurred_at      DateTime,
+    incident_type    Enum8('NEAR_MISS'=1,'FIRST_AID'=2,'MINOR_INJURY'=3,'LTI'=4,'RIDDOR'=5,'FATALITY'=6,'ENV'=7),
+    activity         LowCardinality(String),
+    trade            LowCardinality(String),
+    description      String,
+    severity         Enum8('LOW'=1,'MEDIUM'=2,'HIGH'=3,'CRITICAL'=4),
+    days_lost        UInt16,
+    contractor_id    Nullable(String)
+) ENGINE = MergeTree()
+ORDER BY (occurred_at, project_id);
+
+CREATE TABLE root_causes (
+    incident_id      UUID,
+    cause_category   Enum8('UNSAFE_ACT'=1,'UNSAFE_CONDITION'=2,'PROCEDURE'=3,'EQUIPMENT'=4,'TRAINING'=5,'SUPERVISION'=6),
+    cause_detail     String,
+    investigator     String,
+    closed_date      Nullable(Date)
+) ENGINE = MergeTree()
+ORDER BY (incident_id);
+
+CREATE TABLE observations (
+    observation_id   UUID,
+    project_id       String,
+    observed_at      DateTime,
+    observer         String,
+    observation_type Enum8('SAFE'=1,'UNSAFE_ACT'=2,'UNSAFE_CONDITION'=3),
+    category         LowCardinality(String),
+    description      String
+) ENGINE = MergeTree()
+ORDER BY (observed_at, project_id);
+
+CREATE TABLE manhours (
+    project_id       String,
+    period           Date,
+    hours_worked     Decimal(14,2),
+    headcount        UInt32
+) ENGINE = MergeTree()
+ORDER BY (project_id, period);`,
+    sampleData:`-- Incidents
+INSERT INTO incidents VALUES
+(generateUUIDv4(), 'PRJ-1042', 'SITE-LDN-01', '2025-09-02 10:15:00', 1, 'Working at Height', 'Steel Frame', 'Tool dropped from level 3, no one struck', 2,  0, 'SUB-014'),
+(generateUUIDv4(), 'PRJ-1042', 'SITE-LDN-01', '2025-09-12 14:40:00', 3, 'Lifting Operation', 'Cladding',    'Operative struck hand on panel edge',    2,  2, 'SUB-022'),
+(generateUUIDv4(), 'PRJ-1042', 'SITE-LDN-01', '2025-09-20 08:55:00', 5, 'Excavation',        'Civils',      'Operative fell into trench, fractured wrist', 3, 14, 'SUB-018'),
+(generateUUIDv4(), 'PRJ-1042', 'SITE-LDN-01', '2025-09-28 16:20:00', 1, 'Working at Height', 'Cladding',    'MEWP nearly contacted overhead line',    3,  0, 'SUB-022');
+
+-- Root causes
+INSERT INTO root_causes VALUES
+(generateUUIDv4(), 1, 'Tether not used during tool handover', 'H.Singh', '2025-09-09'),
+(generateUUIDv4(), 1, 'PPE gloves not appropriate for sharp edges', 'H.Singh', '2025-09-18'),
+(generateUUIDv4(), 2, 'Trench edge protection not installed', 'M.Wilson', NULL),
+(generateUUIDv4(), 3, 'Permit-to-work missed overhead-services check', 'M.Wilson', NULL);
+
+-- Observations
+INSERT INTO observations VALUES
+(generateUUIDv4(), 'PRJ-1042', '2025-09-10 09:30:00', 'F.Khan',  2, 'Working at Height', 'Operative removed lanyard while moving'),
+(generateUUIDv4(), 'PRJ-1042', '2025-09-15 11:00:00', 'F.Khan',  3, 'Housekeeping',      'Materials blocking emergency route'),
+(generateUUIDv4(), 'PRJ-1042', '2025-09-22 13:15:00', 'L.Owens', 1, 'Lifting Operation', 'Banksman and slinger correctly briefed');
+
+-- Manhours
+INSERT INTO manhours VALUES
+('PRJ-1042', '2025-07-31', 24600.00, 142),
+('PRJ-1042', '2025-08-31', 27200.00, 156),
+('PRJ-1042', '2025-09-30', 29800.00, 168);`,
+    qanda:[
+      {q:'What is our AFR (Accident Frequency Rate) for the last 12 months?',
+       a:'Count incidents where incident_type IN (\'LTI\',\'RIDDOR\') in the trailing 12 months, divide by SUM(manhours.hours_worked) / 100000. The agent reports the AFR with the underlying RIDDOR count and total exposure hours.'},
+      {q:'Which activities are generating the most near-misses?',
+       a:'Filter incidents where incident_type = \'NEAR_MISS\' and group by activity, counting events. The agent surfaces leading indicators that should feed into the next safety stand-down topic.'},
+      {q:'Show RIDDOR-reportable incidents this year with their root causes',
+       a:'Filter incidents where incident_type = \'RIDDOR\' AND toYear(occurred_at) = toYear(today()), then join to root_causes. The agent presents the full RIDDOR register with cause categorisation for the HSE meeting.'},
+      {q:'Which subcontractors have the highest incident rate per 100k hours?',
+       a:'Aggregate incidents by contractor_id, join to manhours, and compute incidents per 100,000 hours. The agent ranks contractors objectively for safety performance review.'},
+      {q:'Compare near-miss to incident ratios across our sites',
+       a:'For each site_id, compute COUNT(NEAR_MISS) / COUNT(MINOR_INJURY+LTI+RIDDOR). The agent reports the ratio as a reporting-culture indicator and flags sites with suspiciously low near-miss reporting.'},
+      {q:'What if we required a 30-minute toolbox talk after every High severity incident — what is the time investment?',
+       a:'Count high or critical severity incidents in the last year, multiply by 0.5 hours and by site headcount from manhours. The agent reports total hours lost to additional safety talks against the cost of an LTI.'},
+      {q:'Identify cause categories trending upwards quarter on quarter',
+       a:'Group root_causes by cause_category and bucket associated incidents.occurred_at by quarter. The agent surfaces emerging themes such as rising supervision failures and flags them for action.'},
+      {q:'Are unsafe observations clustered around the same activities that produce incidents?',
+       a:'Aggregate observations by category for observation_type IN (\'UNSAFE_ACT\',\'UNSAFE_CONDITION\') and compare against the activity distribution in incidents. The agent confirms whether leading indicators are correctly highlighting where the next incident will occur.'}
+    ]
+  },
+  {
+    id:'defects-snagging',
+    sector:'hse',
+    sectorLabel:'Safety & Quality',
+    title:'Defects & Snagging Tracker Agent',
+    description:'Track quality defects, NCRs, and snagging items from identification through close-out to manage handover risk and contractor accountability. ClickHouse stores inspection results, defect records, and rectification activity, allowing AI agents to monitor close-out time and recurring quality themes.',
+    schema:`-- Defects & Snagging Schema
+CREATE TABLE defects (
+    defect_id        UUID,
+    project_id       String,
+    location         String,
+    element          LowCardinality(String),
+    trade            LowCardinality(String),
+    contractor_id    String,
+    raised_date      Date,
+    raised_by        String,
+    severity         Enum8('COSMETIC'=1,'MINOR'=2,'MAJOR'=3,'CRITICAL'=4),
+    target_close     Date,
+    actual_close     Nullable(Date),
+    status           Enum8('OPEN'=1,'IN_PROGRESS'=2,'CLOSED'=3,'REJECTED'=4),
+    description      String
+) ENGINE = MergeTree()
+ORDER BY (project_id, raised_date);
+
+CREATE TABLE ncrs (
+    ncr_id           String,
+    project_id       String,
+    defect_id        Nullable(UUID),
+    raised_date      Date,
+    description      String,
+    disposition      Enum8('REWORK'=1,'REPAIR'=2,'USE_AS_IS'=3,'REJECT'=4),
+    closed_date      Nullable(Date)
+) ENGINE = MergeTree()
+ORDER BY (project_id, raised_date);
+
+CREATE TABLE inspections (
+    inspection_id    UUID,
+    project_id       String,
+    inspected_at     DateTime,
+    inspector        String,
+    area             String,
+    pass_count       UInt16,
+    fail_count       UInt16
+) ENGINE = MergeTree()
+ORDER BY (project_id, inspected_at);`,
+    sampleData:`-- Defects
+INSERT INTO defects VALUES
+(generateUUIDv4(), 'PRJ-1042', 'L05-Apt-12', 'Walls',       'Plastering', 'SUB-027', '2025-09-08', 'CoW',    1, '2025-09-22', '2025-09-19', 3, 'Skim finish unacceptable around window reveal'),
+(generateUUIDv4(), 'PRJ-1042', 'L08-Cor-A',  'Ceilings',    'MEP',        'SUB-031', '2025-09-10', 'CoW',    2, '2025-09-24',  NULL,        2, 'Sprinkler head misaligned to grid'),
+(generateUUIDv4(), 'PRJ-1042', 'L02-Apt-04', 'Doors',       'Joinery',    'SUB-019', '2025-09-12', 'Client', 2, '2025-09-26', '2025-09-30', 3, 'Door binding on frame'),
+(generateUUIDv4(), 'PRJ-1042', 'Ext-North',  'Cladding',    'Cladding',   'SUB-022', '2025-09-15', 'CDM',    3, '2025-09-29',  NULL,        1, 'Cladding panel out of plumb by 12mm');
+
+-- NCRs
+INSERT INTO ncrs VALUES
+('NCR-024', 'PRJ-1042', NULL,             '2025-09-15', 'Concrete pour cube test failed at 28-day strength', 1, NULL),
+('NCR-027', 'PRJ-1042', NULL,             '2025-09-20', 'Cladding fixings tested below specified pull-out',  1, '2025-10-05');
+
+-- Inspections
+INSERT INTO inspections VALUES
+(generateUUIDv4(), 'PRJ-1042', '2025-09-05 11:00:00', 'CoW',  'L05 Apartments', 18, 4),
+(generateUUIDv4(), 'PRJ-1042', '2025-09-12 14:30:00', 'CoW',  'L08 Corridors',  22, 6),
+(generateUUIDv4(), 'PRJ-1042', '2025-09-20 10:15:00', 'CDM',  'External Cladding', 14, 3);`,
+    qanda:[
+      {q:'How many defects are currently open and how aged are they?',
+       a:'Filter defects where status IN (\'OPEN\',\'IN_PROGRESS\') and compute dateDiff(\'day\', raised_date, today()). The agent reports the open count, average age, and aging buckets to drive the snagging close-out plan.'},
+      {q:'What is our average close-out time by severity?',
+       a:'For defects where actual_close IS NOT NULL, compute dateDiff(\'day\', raised_date, actual_close) grouped by severity. The agent reports the typical turnaround and highlights where critical defects are taking too long.'},
+      {q:'Which contractors have the highest defect density?',
+       a:'Aggregate defects by contractor_id and normalise against package value or inspection volume. The agent ranks contractors by defects per unit of work and supports performance conversations.'},
+      {q:'Show the breakdown of inspection failure rates by area',
+       a:'Compute fail_count / (pass_count + fail_count) from inspections grouped by area. The agent surfaces problem zones likely to drive snagging during pre-handover walks.'},
+      {q:'Are there recurring defect themes pointing to a workmanship issue?',
+       a:'Cluster defects by element and trade with element-level text fragments from description. The agent highlights repeated patterns (e.g. cladding plumb issues, sprinkler misalignment) to brief the rework team.'},
+      {q:'List all open NCRs older than 30 days',
+       a:'Filter ncrs where closed_date IS NULL AND raised_date < today() - 30. The agent presents the aged NCR list along with their disposition to chase resolution before handover.'},
+      {q:'What if we imposed a 10-day SLA on Major defects — how many would breach today?',
+       a:'Filter defects where severity = \'MAJOR\' AND status != \'CLOSED\' AND dateDiff(\'day\', raised_date, today()) > 10. The agent reports the breach count and the contractor distribution to support an SLA policy decision.'},
+      {q:'Forecast residual snagging volume at handover based on current trends',
+       a:'Project current open defects and the rolling rate of new raises minus close-outs from defects to the planned PC date. The agent presents an expected snag list at handover and the resource needed to clear it.'}
+    ]
   }
 ];
 
@@ -6812,49 +8548,169 @@ function renderSchemaERD(schemaSql) {
 
 let currentFilter = 'all';
 
-function filterSector(sector, el) {
-  currentFilter = sector;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+const SECTOR_ORDER = [
+  // Financial Services
+  'cm','rb','cb','pay','comp','wm','am','ins','tax','pe','acc','cry','cf','val',
+  // iGaming
+  'sb','cas','pl','rg','af',
+  // Construction
+  'cp','qs','pm','pro','hse'
+];
+const SECTOR_NAMES = {
+  cm:'Capital Markets', rb:'Retail Banking', cb:'Commercial Banking',
+  pay:'Payments & Fintech', comp:'Compliance', wm:'Wealth Management',
+  am:'Asset Management', ins:'Insurance', tax:'Tax', pe:'Private Equity',
+  acc:'Accounting', cry:'Crypto', cf:'Corporate Finance', val:'Valuations',
+  sb:'Sportsbook & Trading', cas:'Casino & Games', pl:'Player & CRM',
+  rg:'Responsible Gambling & Fraud', af:'Affiliates & Marketing',
+  cp:'Cost Planning & Estimating', qs:'Quantity Surveying',
+  pm:'Project Controls', pro:'Procurement & Supply', hse:'Safety & Quality'
+};
+const SECTOR_INDUSTRY = {
+  cm:'fs', rb:'fs', cb:'fs', pay:'fs', comp:'fs', wm:'fs', am:'fs',
+  ins:'fs', tax:'fs', pe:'fs', acc:'fs', cry:'fs', cf:'fs', val:'fs',
+  sb:'igaming', cas:'igaming', pl:'igaming', rg:'igaming', af:'igaming',
+  cp:'construction', qs:'construction', pm:'construction', pro:'construction', hse:'construction'
+};
+const INDUSTRY_META = {
+  fs: {
+    slug:'fs',
+    title:'ClickHouse In Financial Services<br><span>Agentic AI Demonstrator</span>',
+    desc:'Explore how AI agents analyse and query ClickHouse datasets across capital markets, retail banking, commercial banking, payments, compliance, wealth management, asset management, insurance, corporate finance, and valuation advisory — with example schemas, synthetic data, and sample Q&A.'
+  },
+  igaming: {
+    slug:'igaming',
+    title:'ClickHouse In iGaming<br><span>Agentic AI Demonstrator</span>',
+    desc:'Explore how AI agents analyse and query ClickHouse datasets across sportsbook trading, casino and live games, player CRM and lifetime value, responsible gambling and fraud, and affiliate and acquisition marketing — with example schemas, synthetic data, and sample Q&A.'
+  },
+  construction: {
+    slug:'construction',
+    title:'ClickHouse In Construction<br><span>Agentic AI Demonstrator</span>',
+    desc:'Explore how AI agents analyse and query ClickHouse datasets for cost planners, quantity surveyors, and project teams — covering tender benchmarking, cost-plan accuracy, BOQ rate analysis, variations, earned value, cash flow, materials, subcontractors, safety and defects.'
+  }
+};
+let currentIndustry = 'fs';
+
+function detectIndustryFromUrl() {
+  const p = (location.pathname || '/').toLowerCase();
+  if (p.startsWith('/igaming')) return 'igaming';
+  if (p.startsWith('/construction')) return 'construction';
+  return 'fs';
+}
+
+function applyIndustry(industry, opts) {
+  if (!INDUSTRY_META[industry]) industry = 'fs';
+  currentIndustry = industry;
+  currentFilter = 'all';
+  const meta = INDUSTRY_META[industry];
+  const title = document.getElementById('hero-title');
+  const desc = document.getElementById('hero-desc');
+  if (title) title.innerHTML = meta.title;
+  if (desc) desc.innerHTML = meta.desc;
+  document.querySelectorAll('#industry-switch .industry-switch-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.industry === industry);
+  });
+  const allBtn = document.getElementById('filter-all');
+  const trigger = document.getElementById('industry-trigger');
+  const label = document.getElementById('industry-trigger-label');
+  if (allBtn) allBtn.classList.add('active');
+  if (trigger) trigger.classList.remove('active');
+  if (label) label.textContent = 'Filter by sector';
+  if (opts && opts.push) {
+    history.pushState({industry}, '', '/' + meta.slug);
+  }
+  renderIndustryMenu();
   renderGrid();
 }
 
+function navigateIndustry(ev, industry) {
+  if (ev) ev.preventDefault();
+  applyIndustry(industry, {push:true});
+  showHome();
+}
+
+window.addEventListener('popstate', () => {
+  applyIndustry(detectIndustryFromUrl());
+  showHome();
+});
+
+function renderIndustryMenu() {
+  const menu = document.getElementById('industry-menu');
+  if (!menu) return;
+  const counts = {};
+  for (const s of scenarios) {
+    if (SECTOR_INDUSTRY[s.sector] !== currentIndustry) continue;
+    counts[s.sector] = (counts[s.sector] || 0) + 1;
+  }
+  menu.innerHTML = SECTOR_ORDER
+    .filter(sec => counts[sec])
+    .map(sec => `
+      <div class="industry-item ${currentFilter === sec ? 'active' : ''}" onclick="setIndustryFilter('${sec}')">
+        <span>${SECTOR_NAMES[sec]}</span>
+        <span class="count">${counts[sec]}</span>
+      </div>`).join('');
+}
+
+function setIndustryFilter(sector) {
+  currentFilter = sector;
+  const allBtn = document.getElementById('filter-all');
+  const trigger = document.getElementById('industry-trigger');
+  const label = document.getElementById('industry-trigger-label');
+  if (sector === 'all') {
+    allBtn.classList.add('active');
+    trigger.classList.remove('active');
+    label.textContent = 'Filter by sector';
+  } else {
+    allBtn.classList.remove('active');
+    trigger.classList.add('active');
+    label.textContent = SECTOR_NAMES[sector] || 'Filter by sector';
+  }
+  closeIndustryMenu();
+  renderIndustryMenu();
+  renderGrid();
+}
+
+function toggleIndustryMenu(ev) {
+  ev.stopPropagation();
+  const menu = document.getElementById('industry-menu');
+  const trigger = document.getElementById('industry-trigger');
+  const open = menu.classList.toggle('open');
+  trigger.classList.toggle('open', open);
+  if (open) renderIndustryMenu();
+}
+
+function closeIndustryMenu() {
+  const menu = document.getElementById('industry-menu');
+  const trigger = document.getElementById('industry-trigger');
+  if (menu) menu.classList.remove('open');
+  if (trigger) trigger.classList.remove('open');
+}
+
+document.addEventListener('click', (ev) => {
+  const dd = document.getElementById('industry-dropdown');
+  if (dd && !dd.contains(ev.target)) closeIndustryMenu();
+});
+
 function renderGrid() {
   const container = document.getElementById('grid-container');
-  const filtered = currentFilter === 'all' ? scenarios : scenarios.filter(s => s.sector === currentFilter);
+  const industryFiltered = scenarios.filter(s => SECTOR_INDUSTRY[s.sector] === currentIndustry);
+  const filtered = currentFilter === 'all' ? industryFiltered : industryFiltered.filter(s => s.sector === currentFilter);
 
   const sectors = [...new Set(filtered.map(s => s.sector))];
-  const sectorOrder = ['cm','rb','cb','pay','comp','wm','am','ins','tax','pe','acc','cry','cf','val'];
-  const sectorNames = {
-    cm:'Capital Markets',
-    rb:'Retail Banking',
-    cb:'Commercial Banking',
-    pay:'Payments & Fintech',
-    comp:'Compliance',
-    wm:'Wealth Management',
-    am:'Asset Management',
-    ins:'Insurance',
-    tax:'Tax',
-    pe:'Private Equity',
-    acc:'Accounting',
-    cry:'Crypto',
-    cf:'Corporate Finance',
-    val:'Valuations'
-  };
 
-  container.innerHTML = sectorOrder
-    .filter(s => sectors.includes(s))
+  container.innerHTML = SECTOR_ORDER
+    .filter(sec => sectors.includes(sec))
     .map(sec => {
       const items = filtered.filter(s => s.sector === sec);
       return `
-        <div class="sector-label">${sectorNames[sec]}</div>
+        <div class="sector-label">${SECTOR_NAMES[sec]}</div>
         <div class="grid">
           ${items.map(s => `
             <div class="card" onclick="showDetail('${s.id}')">
               <div class="card-arrow">→</div>
               <div class="card-sector ${s.sector}">${s.sectorLabel}</div>
               <h3>${s.title}</h3>
-              <p>${(longDescriptions[s.id] || s.description).substring(0, 140)}…</p>
+              <p>${((longDescriptions[s.id] || s.description) || '').substring(0, 140)}…</p>
             </div>
           `).join('')}
         </div>`;
@@ -6909,7 +8765,7 @@ function renderScenarioDetail(s) {
           </div>
           <div class="chat-header-text">
             <h3>${agentName}</h3>
-            <p>Powered by ClickHouse · Claude</p>
+            <p>Powered by ClickHouse · DeepSeek V4 Pro on Fireworks</p>
           </div>
           <div class="chat-status"><div class="chat-status-dot"></div>Ready</div>
         </div>
@@ -6929,7 +8785,7 @@ function renderScenarioDetail(s) {
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2L2 6.5l5 2 2 5L14 2z"/></svg>
             </button>
           </div>
-          <div class="chat-hint">Powered by Claude · Press Enter to send</div>
+          <div class="chat-hint">Powered by DeepSeek V4 Pro on Fireworks · Press Enter to send</div>
         </div>
       </div>
     </div>
@@ -7224,7 +9080,7 @@ function sendMessage() {
           </div>
           <div id="${typingId}-queries"></div>
           <div class="msg-bubble" id="${typingId}-reply"></div>
-          <div class="msg-meta">Claude · just now</div>
+          <div class="msg-meta">DeepSeek · just now</div>
         </div>`;
     };
 
@@ -7392,7 +9248,7 @@ function toggleLeftPanel() {
 }
 
 // Init
-renderGrid();
+applyIndustry(detectIndustryFromUrl());
 </script>
 
 <!-- Highlight.js -->

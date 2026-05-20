@@ -3,7 +3,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const express = require('express');
 const http = require('http');
 const https = require('https');
-const Anthropic = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
 const { Langfuse } = require('langfuse');
 const path = require('path');
 
@@ -11,7 +11,20 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '..', 'website')));
 
-const client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+const INDUSTRY_PATHS = ['/', '/fs', '/igaming', '/construction'];
+for (const p of INDUSTRY_PATHS) {
+  app.get(p, (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'website', 'index.html'));
+  });
+}
+
+const client = new OpenAI({
+  apiKey: process.env.FIREWORKS_API_KEY,
+  baseURL: process.env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1'
+});
+const MODEL = process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/deepseek-v4-pro';
+const BASE_URL = process.env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1';
+console.log(`[llm] provider=fireworks model=${MODEL} baseURL=${BASE_URL}`);
 
 const langfuse = (process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY)
   ? new Langfuse({
@@ -163,20 +176,23 @@ app.post('/api/chat', async (req, res) => {
   } else if (scenario) {
     baseSystem = `You are an AI analyst for the "${scenario.title}" scenario (${scenario.sectorLabel}). ${scenario.description}\n\nDatabase schema:\n${scenario.schema}`;
   } else {
-    baseSystem = 'You are an AI agent assistant for a ClickHouse financial services demonstrator.';
+    baseSystem = 'You are an AI agent assistant for a ClickHouse Agentic AI demonstrator covering financial services, iGaming, and construction scenarios.';
   }
 
-  const systemPrompt = `${baseSystem}\n\nAlways use the query_clickhouse tool to retrieve real data before answering. Present results as markdown tables. If a query fails because the database doesn't exist, tell the user to click "Deploy This Example" first.`;
+  const systemPrompt = `${baseSystem}\n\nYou are DeepSeek V4 Pro running on Fireworks AI (not Claude, not GPT). If asked what model you are or who hosts you, answer truthfully: "DeepSeek V4 Pro, served by Fireworks AI."\n\nAlways use the query_clickhouse tool to retrieve real data before answering. Present results as markdown tables. If a query fails because the database doesn't exist, tell the user to click "Deploy This Example" first.`;
 
   const tools = [{
-    name: 'query_clickhouse',
-    description: `Run a SQL SELECT query against ClickHouse database '${dbName}'. Returns tab-separated results with a header row. Always use this tool to answer analytical questions with real data.`,
-    input_schema: {
-      type: 'object',
-      properties: {
-        sql: { type: 'string', description: 'ClickHouse SQL to execute. No trailing semicolon.' }
-      },
-      required: ['sql']
+    type: 'function',
+    function: {
+      name: 'query_clickhouse',
+      description: `Run a SQL SELECT query against ClickHouse database '${dbName}'. Returns tab-separated results with a header row. Always use this tool to answer analytical questions with real data.`,
+      parameters: {
+        type: 'object',
+        properties: {
+          sql: { type: 'string', description: 'ClickHouse SQL to execute. No trailing semicolon.' }
+        },
+        required: ['sql']
+      }
     }
   }];
 
@@ -202,54 +218,87 @@ app.post('/api/chat', async (req, res) => {
     }
   }) : null;
 
-  const model = 'claude-sonnet-4-6';
-
-  const streamClaude = async (messages) => {
+  const streamLLM = async (messages) => {
     for (let attempt = 0; attempt < 4; attempt++) {
       const generation = trace ? trace.generation({
-        name: 'anthropic.messages.stream',
-        model,
-        modelParameters: { max_tokens: 12000, thinking_budget_tokens: 3000 },
-        input: { system: systemPrompt, messages, tools }
+        name: 'fireworks.chat.completions',
+        model: MODEL,
+        modelParameters: { max_tokens: 12000 },
+        input: { messages, tools }
       }) : null;
       try {
-        const stream = client.messages.stream({
-          model,
+        const stream = await client.chat.completions.create({
+          model: MODEL,
           max_tokens: 12000,
-          thinking: { type: 'enabled', budget_tokens: 3000 },
-          system: systemPrompt,
+          stream: true,
           tools,
+          tool_choice: 'auto',
           messages
         });
 
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta') {
-            if (event.delta.type === 'text_delta') {
-              send({ type: 'text', text: event.delta.text });
-            } else if (event.delta.type === 'thinking_delta') {
-              send({ type: 'thinking', text: event.delta.thinking });
+        let assembledText = '';
+        let assembledReasoning = '';
+        const toolCallsByIndex = new Map();
+        let finishReason = null;
+        let usage = null;
+
+        for await (const chunk of stream) {
+          const choice = chunk.choices && chunk.choices[0];
+          if (!choice) {
+            if (chunk.usage) usage = chunk.usage;
+            continue;
+          }
+          const delta = choice.delta || {};
+
+          if (typeof delta.content === 'string' && delta.content.length) {
+            assembledText += delta.content;
+            send({ type: 'text', text: delta.content });
+          }
+          if (typeof delta.reasoning_content === 'string' && delta.reasoning_content.length) {
+            assembledReasoning += delta.reasoning_content;
+            send({ type: 'thinking', text: delta.reasoning_content });
+          }
+          if (Array.isArray(delta.tool_calls)) {
+            for (const tc of delta.tool_calls) {
+              const idx = tc.index ?? 0;
+              let entry = toolCallsByIndex.get(idx);
+              if (!entry) {
+                entry = { id: '', type: 'function', function: { name: '', arguments: '' } };
+                toolCallsByIndex.set(idx, entry);
+              }
+              if (tc.id) entry.id = tc.id;
+              if (tc.function?.name) entry.function.name = tc.function.name;
+              if (tc.function?.arguments) entry.function.arguments += tc.function.arguments;
             }
           }
+
+          if (choice.finish_reason) finishReason = choice.finish_reason;
+          if (chunk.usage) usage = chunk.usage;
         }
 
-        const finalMsg = await stream.finalMessage();
+        const toolCalls = [...toolCallsByIndex.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([, v]) => v);
+
         if (generation) {
           generation.end({
-            output: finalMsg.content,
-            usage: finalMsg.usage ? {
-              input: finalMsg.usage.input_tokens,
-              output: finalMsg.usage.output_tokens,
-              total: (finalMsg.usage.input_tokens || 0) + (finalMsg.usage.output_tokens || 0)
+            output: { content: assembledText, reasoning: assembledReasoning, tool_calls: toolCalls },
+            usage: usage ? {
+              input: usage.prompt_tokens,
+              output: usage.completion_tokens,
+              total: usage.total_tokens ?? ((usage.prompt_tokens || 0) + (usage.completion_tokens || 0))
             } : undefined,
-            metadata: { stop_reason: finalMsg.stop_reason, attempt }
+            metadata: { finish_reason: finishReason, attempt }
           });
         }
-        return finalMsg;
+
+        return { text: assembledText, toolCalls, finishReason };
       } catch (err) {
         if (generation) {
           generation.end({ level: 'ERROR', statusMessage: err.message, metadata: { attempt } });
         }
-        if (err.status === 529 && attempt < 3) {
+        const status = err.status || err.response?.status;
+        if ((status === 429 || (status >= 500 && status < 600)) && attempt < 3) {
           await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
           continue;
         }
@@ -259,48 +308,63 @@ app.post('/api/chat', async (req, res) => {
   };
 
   try {
-    const messages = [{ role: 'user', content: message }];
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: message }
+    ];
     let queryIndex = 0;
     let lastAssistantText = '';
 
     for (let i = 0; i < 6; i++) {
-      const finalMsg = await streamClaude(messages);
+      const { text, toolCalls, finishReason } = await streamLLM(messages);
+      lastAssistantText = text;
 
-      lastAssistantText = finalMsg.content
-        .filter(b => b.type === 'text')
-        .map(b => b.text)
-        .join('\n');
+      if (finishReason !== 'tool_calls' || toolCalls.length === 0) break;
 
-      if (finalMsg.stop_reason !== 'tool_use') break;
+      messages.push({
+        role: 'assistant',
+        content: text || '',
+        tool_calls: toolCalls
+      });
 
-      const toolUses = finalMsg.content.filter(b => b.type === 'tool_use');
-      const assistantContent = finalMsg.content.filter(b => b.type !== 'thinking' || b.thinking);
-      messages.push({ role: 'assistant', content: assistantContent });
-
-      const toolResults = await Promise.all(toolUses.map(async toolUse => {
+      await Promise.all(toolCalls.map(async toolCall => {
         const idx = queryIndex++;
+        let sql = '';
+        try {
+          sql = JSON.parse(toolCall.function.arguments || '{}').sql || '';
+        } catch (e) {
+          sql = '';
+        }
         const span = trace ? trace.span({
           name: 'query_clickhouse',
-          input: { sql: toolUse.input.sql, dbName }
+          input: { sql, dbName }
         }) : null;
-        send({ type: 'query_start', sql: toolUse.input.sql, index: idx });
+        send({ type: 'query_start', sql, index: idx });
         let content;
-        try {
-          const raw = await clickhouseQuery(toolUse.input.sql, dbName);
-          content = raw || '(empty result set)';
-          if (content.length > 8000) content = content.substring(0, 8000) + '\n…(truncated)';
-          const rowCount = content === '(empty result set)' ? 0 : Math.max(0, content.split('\n').filter(Boolean).length - 1);
-          send({ type: 'query_done', index: idx, rowCount });
-          if (span) span.end({ output: { rowCount, preview: content.substring(0, 500) } });
-        } catch (err) {
-          content = `Query error: ${err.message}`;
-          send({ type: 'query_done', index: idx, error: err.message });
-          if (span) span.end({ level: 'ERROR', statusMessage: err.message });
+        if (!sql) {
+          content = `Query error: tool call had no valid sql argument`;
+          send({ type: 'query_done', index: idx, error: 'no sql argument' });
+          if (span) span.end({ level: 'ERROR', statusMessage: 'no sql argument' });
+        } else {
+          try {
+            const raw = await clickhouseQuery(sql, dbName);
+            content = raw || '(empty result set)';
+            if (content.length > 8000) content = content.substring(0, 8000) + '\n…(truncated)';
+            const rowCount = content === '(empty result set)' ? 0 : Math.max(0, content.split('\n').filter(Boolean).length - 1);
+            send({ type: 'query_done', index: idx, rowCount });
+            if (span) span.end({ output: { rowCount, preview: content.substring(0, 500) } });
+          } catch (err) {
+            content = `Query error: ${err.message}`;
+            send({ type: 'query_done', index: idx, error: err.message });
+            if (span) span.end({ level: 'ERROR', statusMessage: err.message });
+          }
         }
-        return { type: 'tool_result', tool_use_id: toolUse.id, content };
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content
+        });
       }));
-
-      messages.push({ role: 'user', content: toolResults });
     }
 
     if (trace) {
@@ -310,7 +374,7 @@ app.post('/api/chat', async (req, res) => {
     send({ type: 'done' });
     res.end();
   } catch (err) {
-    console.error('Anthropic error:', err.message);
+    console.error('Fireworks error:', err.message);
     if (trace) {
       trace.update({ output: err.message, metadata: { error: true } });
       await langfuse.flushAsync().catch(() => {});
