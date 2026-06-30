@@ -6,12 +6,187 @@ const https = require('https');
 const OpenAI = require('openai');
 const { Langfuse } = require('langfuse');
 const path = require('path');
+const fsSync = require('fs');
+const crypto = require('crypto');
+const Database = require('better-sqlite3');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '..', 'website')));
 
-const INDUSTRY_PATHS = ['/', '/fs', '/igaming', '/construction'];
+const db = new Database(path.join(__dirname, 'data.sqlite'));
+db.pragma('journal_mode = WAL');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS agents (
+    id               TEXT PRIMARY KEY,
+    name             TEXT NOT NULL,
+    description      TEXT,
+    model            TEXT NOT NULL,
+    system_prompt    TEXT NOT NULL,
+    instance_id      TEXT NOT NULL,
+    db_name          TEXT NOT NULL,
+    status           TEXT NOT NULL DEFAULT 'live',
+    created_at       INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS clickhouse_instances (
+    id       TEXT PRIMARY KEY,
+    label    TEXT NOT NULL,
+    url      TEXT NOT NULL,
+    user     TEXT NOT NULL,
+    password TEXT NOT NULL DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+  );
+  CREATE TABLE IF NOT EXISTS scenario_overrides (
+    scenario_id      TEXT PRIMARY KEY,
+    status           TEXT,
+    tags             TEXT,
+    system_prompt    TEXT,
+    questions        TEXT,
+    expose_internals INTEGER
+  );
+`);
+ensureColumn('scenario_overrides', 'tags',             'TEXT');
+ensureColumn('scenario_overrides', 'system_prompt',    'TEXT');
+ensureColumn('scenario_overrides', 'questions',        'TEXT');
+ensureColumn('scenario_overrides', 'expose_internals', 'INTEGER');
+
+function ensureColumn(table, col, decl) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  if (!cols.includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${decl}`);
+}
+ensureColumn('agents', 'status',           "TEXT NOT NULL DEFAULT 'live'");
+ensureColumn('agents', 'tags',             'TEXT');
+ensureColumn('agents', 'questions',        'TEXT');
+ensureColumn('agents', 'sector',           'TEXT');
+ensureColumn('agents', 'sector_label',     'TEXT');
+ensureColumn('agents', 'long_description', 'TEXT');
+ensureColumn('agents', 'agent_schema',     'TEXT');
+ensureColumn('agents', 'sample_data',      'TEXT');
+ensureColumn('agents', 'allow_deploy',     'INTEGER NOT NULL DEFAULT 1');
+ensureColumn('agents', 'is_builtin',       'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('agents', 'expose_internals', 'INTEGER NOT NULL DEFAULT 1');
+
+function normalizeQuestions(input) {
+  if (Array.isArray(input)) return input.map(q => String(q).trim()).filter(Boolean);
+  if (typeof input === 'string') return input.split('\n').map(q => q.trim()).filter(Boolean);
+  return [];
+}
+function normalizeTags(input) {
+  if (Array.isArray(input)) return input.map(t => String(t).trim()).filter(Boolean);
+  if (typeof input === 'string') return input.split(',').map(t => t.trim()).filter(Boolean);
+  return [];
+}
+
+// Seed default ClickHouse instance from .env if empty
+{
+  const count = db.prepare('SELECT COUNT(*) AS c FROM clickhouse_instances').get().c;
+  if (count === 0) {
+    db.prepare(`
+      INSERT INTO clickhouse_instances (id, label, url, user, password) VALUES (?, ?, ?, ?, ?)
+    `).run(
+      'default',
+      process.env.CLICKHOUSE_LABEL || 'Default',
+      process.env.CLICKHOUSE_URL || 'http://localhost:8123',
+      process.env.CLICKHOUSE_USER || 'default',
+      process.env.CLICKHOUSE_PASSWORD || ''
+    );
+    console.log('[seed] default clickhouse instance copied from .env');
+  }
+}
+
+// Seed built-in agents from seed-builtins.json if missing
+{
+  const seedPath = path.join(__dirname, 'seed-builtins.json');
+  if (fsSync.existsSync(seedPath)) {
+    const seed = JSON.parse(fsSync.readFileSync(seedPath, 'utf8'));
+    const have = new Set(db.prepare('SELECT id FROM agents').all().map(r => r.id));
+    const insert = db.prepare(`
+      INSERT INTO agents (id, name, description, long_description, sector, sector_label,
+                          model, system_prompt, instance_id, db_name, status, tags, questions,
+                          agent_schema, sample_data, allow_deploy, is_builtin, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const fwModel = process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/deepseek-v4-pro';
+    const now = Date.now();
+    let inserted = 0;
+    for (const a of seed) {
+      if (have.has(a.id)) continue;
+      insert.run(
+        a.id,
+        a.name,
+        a.description || '',
+        a.longDescription || null,
+        a.sector || null,
+        a.sectorLabel || null,
+        fwModel,
+        a.systemPrompt || `You are an AI analyst for ${a.name}.`,
+        'default',
+        `demo_${a.id.replace(/-/g, '_')}`,
+        a.status || 'draft',
+        JSON.stringify(a.tags || []),
+        JSON.stringify(a.questions || []),
+        a.schema || null,
+        a.sampleData || null,
+        a.allowDeploy === false ? 0 : 1,
+        a.isBuiltin ? 1 : 0,
+        now
+      );
+      inserted++;
+    }
+    if (inserted) console.log(`[seed] inserted ${inserted} built-in agents`);
+  }
+}
+
+function getInstance(id) {
+  return db.prepare('SELECT * FROM clickhouse_instances WHERE id = ?').get(id || 'default')
+      || db.prepare("SELECT * FROM clickhouse_instances WHERE id = 'default'").get();
+}
+function normalizeQuestions(input) {
+  if (Array.isArray(input)) return input.map(q => String(q).trim()).filter(Boolean);
+  if (typeof input === 'string') return input.split('\n').map(q => q.trim()).filter(Boolean);
+  return [];
+}
+function normalizeTags(input) {
+  if (Array.isArray(input)) return input.map(t => String(t).trim()).filter(Boolean);
+  if (typeof input === 'string') return input.split(',').map(t => t.trim()).filter(Boolean);
+  return [];
+}
+const SETTING_DEFAULTS = {
+  homeTitle: 'AI agents that talk to your data.',
+  homeDescription: 'A curated set of analytical agents wired into ClickHouse, ready to answer questions in plain English. Pick one to chat with — or build your own.',
+  homeEyebrow: 'Live Agents · ClickHouse'
+};
+function getAllSettings() {
+  const rows = db.prepare('SELECT key, value FROM settings').all();
+  const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
+  return { ...SETTING_DEFAULTS, ...map };
+}
+
+const CLICKHOUSE_INSTANCES = [
+  {
+    id: 'default',
+    label: process.env.CLICKHOUSE_LABEL || 'Default (from .env)',
+    url: process.env.CLICKHOUSE_URL || 'https://localhost:8443',
+    user: process.env.CLICKHOUSE_USER || 'default',
+    password: process.env.CLICKHOUSE_PASSWORD || ''
+  }
+];
+const instancesById = Object.fromEntries(CLICKHOUSE_INSTANCES.map(i => [i.id, i]));
+
+const FIREWORKS_MODELS = [
+  { id: 'accounts/fireworks/models/deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
+  { id: 'accounts/fireworks/models/deepseek-v3p1', label: 'DeepSeek V3.1' },
+  { id: 'accounts/fireworks/models/llama-v3p3-70b-instruct', label: 'Llama 3.3 70B' },
+  { id: 'accounts/fireworks/models/llama-v3p1-405b-instruct', label: 'Llama 3.1 405B' },
+  { id: 'accounts/fireworks/models/qwen2p5-72b-instruct', label: 'Qwen 2.5 72B' },
+  { id: 'accounts/fireworks/models/mixtral-8x22b-instruct', label: 'Mixtral 8x22B' },
+  { id: 'accounts/fireworks/models/gpt-oss-120b', label: 'GPT-OSS 120B' }
+];
+
+const INDUSTRY_PATHS = ['/', '/fs', '/igaming', '/construction', '/admin'];
 for (const p of INDUSTRY_PATHS) {
   app.get(p, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'website', 'index.html'));
@@ -41,9 +216,10 @@ const langfuse = (process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET
 if (langfuse) console.log(`[langfuse] enabled host=${process.env.LANGFUSE_HOST || 'http://78.47.43.63:3000'}`);
 else console.log('[langfuse] disabled (set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY to enable)');
 
-function clickhouseQuery(sql, database) {
+function clickhouseQuery(sql, database, instanceId) {
   return new Promise((resolve, reject) => {
-    const base = new URL(process.env.CLICKHOUSE_URL || 'https://localhost:8443');
+    const inst = instancesById[instanceId || 'default'] || instancesById['default'];
+    const base = new URL(inst.url);
     const isHttps = base.protocol === 'https:';
     const transport = isHttps ? https : http;
     const params = new URLSearchParams();
@@ -51,9 +227,7 @@ function clickhouseQuery(sql, database) {
     params.set('default_format', 'TabSeparatedWithNames');
 
     const body = Buffer.from(sql, 'utf8');
-    const auth = Buffer.from(
-      `${process.env.CLICKHOUSE_USER || 'default'}:${process.env.CLICKHOUSE_PASSWORD || ''}`
-    ).toString('base64');
+    const auth = Buffer.from(`${inst.user}:${inst.password}`).toString('base64');
 
     const options = {
       hostname: base.hostname,
@@ -169,14 +343,166 @@ app.post('/api/query', async (req, res) => {
   }
 });
 
+app.get('/api/scenario-overrides', (req, res) => {
+  const rows = db.prepare('SELECT scenario_id AS scenarioId, status, tags, system_prompt AS systemPrompt, questions, expose_internals AS exposeInternals FROM scenario_overrides').all();
+  res.json({
+    overrides: rows.map(r => ({
+      scenarioId: r.scenarioId,
+      status: r.status || null,
+      tags: r.tags ? JSON.parse(r.tags) : null,
+      systemPrompt: r.systemPrompt || null,
+      questions: r.questions ? JSON.parse(r.questions) : null,
+      exposeInternals: r.exposeInternals === null || r.exposeInternals === undefined ? null : !!r.exposeInternals
+    }))
+  });
+});
+
+app.put('/api/scenario-overrides/:id', (req, res) => {
+  const { status, tags, systemPrompt, questions, exposeInternals } = req.body || {};
+  if (status !== undefined && status !== null && status !== 'draft' && status !== 'live') {
+    return res.status(400).json({ error: "status must be 'draft' or 'live'" });
+  }
+  const existing = db.prepare('SELECT scenario_id, status, tags, system_prompt, questions, expose_internals FROM scenario_overrides WHERE scenario_id = ?').get(req.params.id);
+  const nextStatus = status !== undefined ? status : (existing?.status ?? null);
+  const nextTags = tags !== undefined ? JSON.stringify(normalizeTags(tags)) : (existing?.tags ?? null);
+  const nextPrompt = systemPrompt !== undefined ? (String(systemPrompt).trim() || null) : (existing?.system_prompt ?? null);
+  const nextQuestions = questions !== undefined ? JSON.stringify(normalizeQuestions(questions)) : (existing?.questions ?? null);
+  const nextExpose = exposeInternals === undefined ? (existing?.expose_internals ?? null) : (exposeInternals ? 1 : 0);
+  db.prepare(`
+    INSERT INTO scenario_overrides (scenario_id, status, tags, system_prompt, questions, expose_internals) VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(scenario_id) DO UPDATE SET status=excluded.status, tags=excluded.tags, system_prompt=excluded.system_prompt, questions=excluded.questions, expose_internals=excluded.expose_internals
+  `).run(req.params.id, nextStatus, nextTags, nextPrompt, nextQuestions, nextExpose);
+  res.json({
+    scenarioId: req.params.id,
+    status: nextStatus,
+    tags: nextTags ? JSON.parse(nextTags) : null,
+    systemPrompt: nextPrompt,
+    questions: nextQuestions ? JSON.parse(nextQuestions) : null,
+    exposeInternals: nextExpose === null ? null : !!nextExpose
+  });
+});
+
+app.get('/api/settings', (req, res) => {
+  res.json({ settings: getAllSettings() });
+});
+
+app.put('/api/settings', (req, res) => {
+  const incoming = req.body || {};
+  const allowed = Object.keys(SETTING_DEFAULTS);
+  const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');
+  const tx = db.transaction((entries) => {
+    for (const [k, v] of entries) upsert.run(k, v);
+  });
+  const entries = Object.entries(incoming).filter(([k]) => allowed.includes(k)).map(([k, v]) => [k, String(v ?? '')]);
+  tx(entries);
+  res.json({ settings: getAllSettings() });
+});
+
+app.get('/api/clickhouse-instances', (req, res) => {
+  res.json({ instances: CLICKHOUSE_INSTANCES.map(({ id, label, url }) => ({ id, label, url })) });
+});
+
+app.get('/api/models', (req, res) => {
+  res.json({ models: FIREWORKS_MODELS });
+});
+
+function rowToAgent(r) {
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    model: r.model,
+    systemPrompt: r.systemPrompt,
+    instanceId: r.instanceId,
+    dbName: r.dbName,
+    status: r.status,
+    tags: r.tags ? JSON.parse(r.tags) : [],
+    questions: r.questions ? JSON.parse(r.questions) : [],
+    exposeInternals: r.exposeInternals !== 0,
+    createdAt: r.createdAt
+  };
+}
+
+app.get('/api/agents', (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, name, description, model, system_prompt AS systemPrompt,
+           instance_id AS instanceId, db_name AS dbName, status, tags, questions,
+           expose_internals AS exposeInternals,
+           created_at AS createdAt
+    FROM agents ORDER BY created_at DESC
+  `).all();
+  res.json({ agents: rows.map(rowToAgent) });
+});
+
+app.post('/api/agents', (req, res) => {
+  const { name, description, model, systemPrompt, instanceId, dbName, status, tags, questions } = req.body || {};
+  if (!name || !model || !systemPrompt || !instanceId || !dbName) {
+    return res.status(400).json({ error: 'name, model, systemPrompt, instanceId, and dbName are required' });
+  }
+  if (!instancesById[instanceId]) {
+    return res.status(400).json({ error: `Unknown ClickHouse instance: ${instanceId}` });
+  }
+  const finalStatus = status === 'draft' ? 'draft' : 'live';
+  const finalTags = JSON.stringify(normalizeTags(tags));
+  const finalQuestions = JSON.stringify(normalizeQuestions(questions));
+  const id = crypto.randomUUID();
+  const createdAt = Date.now();
+  db.prepare(`
+    INSERT INTO agents (id, name, description, model, system_prompt, instance_id, db_name, status, tags, questions, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, name, description || '', model, systemPrompt, instanceId, dbName, finalStatus, finalTags, finalQuestions, createdAt);
+  res.json({
+    agent: { id, name, description: description || '', model, systemPrompt, instanceId, dbName,
+             status: finalStatus, tags: JSON.parse(finalTags), questions: JSON.parse(finalQuestions), createdAt }
+  });
+});
+
+app.patch('/api/agents/:id', (req, res) => {
+  const { status, tags, name, description, systemPrompt, questions } = req.body || {};
+  const sets = [];
+  const args = [];
+  if (status !== undefined) {
+    if (status !== 'draft' && status !== 'live') {
+      return res.status(400).json({ error: "status must be 'draft' or 'live'" });
+    }
+    sets.push('status = ?'); args.push(status);
+  }
+  if (tags !== undefined) {
+    sets.push('tags = ?'); args.push(JSON.stringify(normalizeTags(tags)));
+  }
+  if (questions !== undefined) {
+    sets.push('questions = ?'); args.push(JSON.stringify(normalizeQuestions(questions)));
+  }
+  if (typeof name === 'string') { sets.push('name = ?'); args.push(name); }
+  if (typeof description === 'string') { sets.push('description = ?'); args.push(description); }
+  if (typeof systemPrompt === 'string') { sets.push('system_prompt = ?'); args.push(systemPrompt); }
+  if (req.body && req.body.exposeInternals !== undefined) {
+    sets.push('expose_internals = ?'); args.push(req.body.exposeInternals ? 1 : 0);
+  }
+  if (!sets.length) return res.status(400).json({ error: 'nothing to update' });
+  args.push(req.params.id);
+  const info = db.prepare(`UPDATE agents SET ${sets.join(', ')} WHERE id = ?`).run(...args);
+  if (!info.changes) return res.status(404).json({ error: 'Agent not found' });
+  res.json({ updated: info.changes });
+});
+
+app.delete('/api/agents/:id', (req, res) => {
+  const info = db.prepare('DELETE FROM agents WHERE id = ?').run(req.params.id);
+  res.json({ deleted: info.changes });
+});
+
 app.post('/api/chat', async (req, res) => {
-  const { message, scenario } = req.body;
+  const { message, scenario, customAgent } = req.body;
   if (!message) return res.status(400).json({ error: 'message required' });
 
-  const dbName = scenario?.dbName || null;
+  const instanceId = customAgent?.instanceId || 'default';
+  const dbName = customAgent?.dbName || scenario?.dbName || null;
+  const requestedModel = customAgent?.model || MODEL;
 
   let baseSystem;
-  if (scenario?.systemPrompt) {
+  if (customAgent?.systemPrompt) {
+    baseSystem = customAgent.systemPrompt;
+  } else if (scenario?.systemPrompt) {
     baseSystem = `${scenario.systemPrompt}\n\nDatabase schema:\n${scenario.schema}`;
   } else if (scenario) {
     baseSystem = `You are an AI analyst for the "${scenario.title}" scenario (${scenario.sectorLabel}). ${scenario.description}\n\nDatabase schema:\n${scenario.schema}`;
@@ -184,7 +510,9 @@ app.post('/api/chat', async (req, res) => {
     baseSystem = 'You are an AI agent assistant for a ClickHouse Agentic AI demonstrator covering financial services, iGaming, and construction scenarios.';
   }
 
-  const systemPrompt = `${baseSystem}\n\nYou are DeepSeek V4 Pro running on Fireworks AI (not Claude, not GPT). If asked what model you are or who hosts you, answer truthfully: "DeepSeek V4 Pro, served by Fireworks AI."\n\nAlways use the query_clickhouse tool to retrieve real data before answering. Present results as markdown tables. If a query fails because the database doesn't exist, tell the user to click "Deploy This Example" first.`;
+  const systemPrompt = customAgent
+    ? `${baseSystem}\n\nYou have access to a ClickHouse database named '${dbName}'. Always use the query_clickhouse tool to retrieve real data before answering. Present tabular results as markdown tables.`
+    : `${baseSystem}\n\nYou are DeepSeek V4 Pro running on Fireworks AI (not Claude, not GPT). If asked what model you are or who hosts you, answer truthfully: "DeepSeek V4 Pro, served by Fireworks AI."\n\nAlways use the query_clickhouse tool to retrieve real data before answering. Present results as markdown tables. If a query fails because the database doesn't exist, tell the user to click "Deploy This Example" first.`;
 
   const tools = [{
     type: 'function',
@@ -219,6 +547,9 @@ app.post('/api/chat', async (req, res) => {
     metadata: {
       scenario: scenario?.title,
       sector: scenario?.sectorLabel,
+      customAgent: customAgent?.name,
+      model: requestedModel,
+      instanceId,
       dbName
     }
   }) : null;
@@ -227,13 +558,13 @@ app.post('/api/chat', async (req, res) => {
     for (let attempt = 0; attempt < 4; attempt++) {
       const generation = trace ? trace.generation({
         name: 'fireworks.chat.completions',
-        model: MODEL,
+        model: requestedModel,
         modelParameters: { max_tokens: 12000 },
         input: { messages, tools }
       }) : null;
       try {
         const stream = await client.chat.completions.create({
-          model: MODEL,
+          model: requestedModel,
           max_tokens: 12000,
           stream: true,
           tools,
@@ -352,7 +683,7 @@ app.post('/api/chat', async (req, res) => {
           if (span) span.end({ level: 'ERROR', statusMessage: 'no sql argument' });
         } else {
           try {
-            const raw = await clickhouseQuery(sql, dbName);
+            const raw = await clickhouseQuery(sql, dbName, instanceId);
             content = raw || '(empty result set)';
             if (content.length > 8000) content = content.substring(0, 8000) + '\n…(truncated)';
             const rowCount = content === '(empty result set)' ? 0 : Math.max(0, content.split('\n').filter(Boolean).length - 1);
