@@ -9058,7 +9058,7 @@ function renderScenarioDetail(s) {
   currentScenario = s;
   const agentName = s.title;
   const exposeInternals = getEffectiveBuiltinExposeInternals(s);
-  const layoutClasses = `detail-layout left-collapsed${exposeInternals ? '' : ' internals-hidden'}`;
+  const layoutClasses = `detail-layout${exposeInternals ? '' : ' internals-hidden'}`;
 
   document.getElementById('detail-page').innerHTML = `
     <div class="${layoutClasses}" id="detail-layout">
@@ -9364,6 +9364,16 @@ function sendMessage() {
   input.style.height = 'auto';
   msgs.scrollTop = msgs.scrollHeight;
 
+  // Track whether to follow new content (paused when user scrolls up)
+  const SCROLL_FOLLOW_THRESHOLD = 80;
+  const followState = { follow: true };
+  const onScroll = () => {
+    const distanceFromBottom = msgs.scrollHeight - (msgs.scrollTop + msgs.clientHeight);
+    followState.follow = distanceFromBottom <= SCROLL_FOLLOW_THRESHOLD;
+  };
+  msgs.addEventListener('scroll', onScroll, { passive: true });
+  const maybeAutoScroll = () => { if (followState.follow) msgs.scrollTop = msgs.scrollHeight; };
+
   // Typing indicator
   const typingId = 'typing-' + Date.now();
   msgs.innerHTML += `
@@ -9445,14 +9455,14 @@ function sendMessage() {
             const txt = document.getElementById(`${typingId}-ttext`);
             if (wrap) wrap.style.display = '';
             if (txt) txt.textContent = thinkingText;
-            msgs.scrollTop = msgs.scrollHeight;
+            maybeAutoScroll();
 
           } else if (data.type === 'text') {
             init();
             replyText += data.text;
             const el = document.getElementById(`${typingId}-reply`);
             if (el) el.innerHTML = window.marked ? marked.parse(replyText) : escHtml(replyText);
-            msgs.scrollTop = msgs.scrollHeight;
+            maybeAutoScroll();
 
           } else if (data.type === 'query_start') {
             init();
@@ -9480,7 +9490,7 @@ function sendMessage() {
                   <div class="query-sql">${escHtml(data.sql)}</div>
                 </details>
               </div>`;
-            msgs.scrollTop = msgs.scrollHeight;
+            maybeAutoScroll();
 
           } else if (data.type === 'query_done') {
             const rowsEl = document.getElementById(`${typingId}-qr-${data.index}`);
@@ -9507,7 +9517,9 @@ function sendMessage() {
           <div class="msg-bubble">Failed to reach server. Is it running?</div>
           <div class="msg-meta">Error · just now</div>
         </div>`;
-      msgs.scrollTop = msgs.scrollHeight;
+      maybeAutoScroll();
+    } finally {
+      msgs.removeEventListener('scroll', onScroll);
     }
   })();
 }
@@ -10107,7 +10119,7 @@ function renderCustomAgentDetail(agent) {
   const modelLabel = (availableModels.find(m => m.id === agent.model) || {}).label || agent.model;
   const instLabel = (availableInstances.find(i => i.id === agent.instanceId) || {}).label || agent.instanceId;
   const exposeInternals = agent.exposeInternals !== false;
-  const layoutClasses = `detail-layout left-collapsed${exposeInternals ? '' : ' internals-hidden'}`;
+  const layoutClasses = `detail-layout${exposeInternals ? '' : ' internals-hidden'}`;
   document.getElementById('detail-page').innerHTML = `
     <div class="${layoutClasses}" id="detail-layout">
       <div class="detail-left detail" id="detail-left">
