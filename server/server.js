@@ -518,7 +518,9 @@ app.post('/api/chat', async (req, res) => {
 
   let baseSystem;
   if (customAgent?.systemPrompt) {
-    baseSystem = customAgent.systemPrompt;
+    baseSystem = customAgent.schema
+      ? `${customAgent.systemPrompt}\n\nDatabase schema:\n${customAgent.schema}`
+      : customAgent.systemPrompt;
   } else if (scenario?.systemPrompt) {
     baseSystem = `${scenario.systemPrompt}\n\nDatabase schema:\n${scenario.schema}`;
   } else if (scenario) {
@@ -579,6 +581,8 @@ app.post('/api/chat', async (req, res) => {
         modelParameters: { max_tokens: 12000 },
         input: { messages, tools }
       }) : null;
+      const tStart = Date.now();
+      let tFirstByte = null;
       try {
         const stream = await client.chat.completions.create({
           model: requestedModel,
@@ -588,6 +592,8 @@ app.post('/api/chat', async (req, res) => {
           tool_choice: 'auto',
           messages
         });
+        const tHeaders = Date.now();
+        console.log(`[chat] llm headers=${tHeaders - tStart}ms attempt=${attempt} model=${requestedModel}`);
 
         let assembledText = '';
         let assembledReasoning = '';
@@ -604,6 +610,10 @@ app.post('/api/chat', async (req, res) => {
           const delta = choice.delta || {};
 
           if (typeof delta.content === 'string' && delta.content.length) {
+            if (tFirstByte === null) {
+              tFirstByte = Date.now();
+              console.log(`[chat] llm first-token=${tFirstByte - tStart}ms`);
+            }
             assembledText += delta.content;
             send({ type: 'text', text: delta.content });
           }
@@ -645,6 +655,8 @@ app.post('/api/chat', async (req, res) => {
           });
         }
 
+        const tDone = Date.now();
+        console.log(`[chat] llm total=${tDone - tStart}ms toolCalls=${toolCalls.length} finish=${finishReason} promptTokens=${usage?.prompt_tokens ?? '?'} outTokens=${usage?.completion_tokens ?? '?'}`);
         return { text: assembledText, toolCalls, finishReason };
       } catch (err) {
         if (generation) {

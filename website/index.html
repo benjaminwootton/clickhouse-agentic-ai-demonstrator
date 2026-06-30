@@ -1439,7 +1439,8 @@ function sendMessage() {
     model: currentAgent.model,
     systemPrompt: currentAgent.systemPrompt,
     instanceId: currentAgent.instanceId,
-    dbName: currentAgent.dbName
+    dbName: currentAgent.dbName,
+    schema: currentAgent.schema || null
   } : null;
 
   (async () => {
