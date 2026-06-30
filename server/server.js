@@ -411,6 +411,9 @@ function rowToAgent(r) {
     id: r.id,
     name: r.name,
     description: r.description,
+    longDescription: r.longDescription || null,
+    sector: r.sector || null,
+    sectorLabel: r.sectorLabel || null,
     model: r.model,
     systemPrompt: r.systemPrompt,
     instanceId: r.instanceId,
@@ -418,6 +421,10 @@ function rowToAgent(r) {
     status: r.status,
     tags: r.tags ? JSON.parse(r.tags) : [],
     questions: r.questions ? JSON.parse(r.questions) : [],
+    schema: r.schema || null,
+    sampleData: r.sampleData || null,
+    allowDeploy: r.allowDeploy !== 0,
+    isBuiltin: r.isBuiltin === 1,
     exposeInternals: r.exposeInternals !== 0,
     createdAt: r.createdAt
   };
@@ -425,11 +432,15 @@ function rowToAgent(r) {
 
 app.get('/api/agents', (req, res) => {
   const rows = db.prepare(`
-    SELECT id, name, description, model, system_prompt AS systemPrompt,
+    SELECT id, name, description, long_description AS longDescription,
+           sector, sector_label AS sectorLabel,
+           model, system_prompt AS systemPrompt,
            instance_id AS instanceId, db_name AS dbName, status, tags, questions,
+           agent_schema AS schema, sample_data AS sampleData,
+           allow_deploy AS allowDeploy, is_builtin AS isBuiltin,
            expose_internals AS exposeInternals,
            created_at AS createdAt
-    FROM agents ORDER BY created_at DESC
+    FROM agents ORDER BY is_builtin DESC, created_at ASC
   `).all();
   res.json({ agents: rows.map(rowToAgent) });
 });
@@ -479,6 +490,12 @@ app.patch('/api/agents/:id', (req, res) => {
   if (req.body && req.body.exposeInternals !== undefined) {
     sets.push('expose_internals = ?'); args.push(req.body.exposeInternals ? 1 : 0);
   }
+  if (req.body && req.body.allowDeploy !== undefined) {
+    sets.push('allow_deploy = ?'); args.push(req.body.allowDeploy ? 1 : 0);
+  }
+  if (typeof req.body?.schema === 'string') { sets.push('agent_schema = ?'); args.push(req.body.schema); }
+  if (typeof req.body?.sampleData === 'string') { sets.push('sample_data = ?'); args.push(req.body.sampleData); }
+  if (typeof req.body?.longDescription === 'string') { sets.push('long_description = ?'); args.push(req.body.longDescription); }
   if (!sets.length) return res.status(400).json({ error: 'nothing to update' });
   args.push(req.params.id);
   const info = db.prepare(`UPDATE agents SET ${sets.join(', ')} WHERE id = ?`).run(...args);
