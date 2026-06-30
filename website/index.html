@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ClickHouse Agentic AI Demonstrator</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -255,10 +256,15 @@ footer{border-top:1px solid #1e2d47;padding:2.5rem 2rem 1.2rem;text-align:center
 .detail-left{position:relative;transition:width .25s ease,padding .25s ease,opacity .2s ease}
 .detail-layout.left-collapsed .detail-left{width:0;padding-left:0;padding-right:0;border-right:none;overflow:hidden;opacity:0}
 .detail-layout.left-collapsed .detail-right{width:100%}
-.left-restore{display:none;position:absolute;top:1rem;left:1rem;width:30px;height:30px;border-radius:6px;border:1px solid #1e2d47;background:#0d1220;color:#94a3b8;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;z-index:5}
-.left-restore:hover{color:#e2e8f0;border-color:#2563eb}
+.left-restore{display:none;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:#475569;background:transparent;border:none;border-right:1px solid #1e2d47;border-radius:0;width:32px;flex-shrink:0;padding:0}
+.left-restore:hover{color:#60a5fa;background:rgba(96,165,250,.06);border-right-color:#2563eb}
 .left-restore svg{width:14px;height:14px}
 .detail-layout.left-collapsed .left-restore{display:flex}
+.detail-layout.left-collapsed .detail-right{width:auto;flex:1}
+.detail-layout.internals-hidden .left-restore{display:none!important}
+.detail-layout.internals-hidden .detail-left{display:none!important}
+body.light .left-restore{border-right-color:#e2e8f0;color:#94a3b8}
+body.light .left-restore:hover{color:#1d4ed8;background:#eff6ff;border-right-color:#2563eb}
 .detail-right{position:relative;transition:width .25s ease}
 
 /* LIGHT MODE OVERRIDES */
@@ -369,18 +375,189 @@ body.light .erd-col-type{color:#94a3b8}
 body.light .system-prompt-block{background:#f8fafc;border-color:#bfdbfe;color:#0369a1}
 body.light .system-prompt-label{color:#1d4ed8}
 body.light footer{border-top-color:#e2e8f0;color:#94a3b8}
-body.light .left-toggle,body.light .left-restore{background:#ffffff;border-color:#e2e8f0;color:#475569}
-body.light .left-toggle:hover,body.light .left-restore:hover{color:#0f172a;border-color:#2563eb}
+body.light .left-toggle{background:#ffffff;border-color:#e2e8f0;color:#475569}
+body.light .left-toggle:hover{color:#0f172a;border-color:#2563eb}
+
+/* CUSTOM AGENTS */
+.custom-agents-section{max-width:1600px;margin:0 auto 2.25rem;padding:0 2rem}
+.custom-agents-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #1e2d47}
+.custom-agents-title{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#475569}
+.custom-agents-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+.create-agent-card{background:transparent;border:1.5px dashed #334155;border-radius:12px;padding:1.4rem;cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:140px;color:#64748b}
+.create-agent-card:hover{border-color:#2563eb;color:#60a5fa;background:rgba(37,99,235,.04)}
+.create-agent-card .plus{font-size:1.6rem;line-height:1;margin-bottom:.5rem}
+.create-agent-card .label{font-size:.85rem;font-weight:600}
+.custom-card{position:relative}
+.custom-card .agent-delete{position:absolute;top:.75rem;right:.75rem;width:24px;height:24px;border-radius:6px;border:1px solid #1e2d47;background:#0d1220;color:#64748b;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:.85rem;line-height:1}
+.custom-card:hover .agent-delete{display:flex}
+.custom-card .agent-delete:hover{border-color:#7f1d1d;color:#f87171}
+.custom-card .agent-meta{font-size:.7rem;color:#475569;margin-top:.5rem;display:flex;gap:.6rem;flex-wrap:wrap}
+.custom-card .agent-meta span{font-family:'JetBrains Mono',monospace}
+body.light .custom-agents-head{border-bottom-color:#e2e8f0}
+body.light .custom-agents-title{color:#64748b}
+body.light .create-agent-card{border-color:#cbd5e1;color:#64748b}
+body.light .create-agent-card:hover{border-color:#2563eb;color:#1d4ed8;background:#eff6ff}
+body.light .custom-card .agent-delete{background:#ffffff;border-color:#e2e8f0;color:#94a3b8}
+body.light .custom-card .agent-delete:hover{border-color:#fca5a5;color:#dc2626}
+
+/* LIVE HOME */
+.live-home{position:relative;overflow:hidden}
+.live-home-bg{position:absolute;inset:0;pointer-events:none;z-index:0;background:
+  radial-gradient(circle at 20% 10%,rgba(59,130,246,.18),transparent 45%),
+  radial-gradient(circle at 80% 20%,rgba(167,139,250,.16),transparent 50%),
+  radial-gradient(circle at 50% 95%,rgba(34,211,238,.12),transparent 55%)}
+.live-home-bg::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:42px 42px;mask-image:radial-gradient(ellipse at center,#000 50%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse at center,#000 50%,transparent 100%)}
+.live-hero{position:relative;z-index:1;padding:5rem 2rem 2.5rem;text-align:center;max-width:980px;margin:0 auto}
+.live-hero-eyebrow{display:inline-flex;align-items:center;gap:.55rem;background:rgba(37,99,235,.12);border:1px solid rgba(96,165,250,.3);border-radius:999px;padding:.4rem 1rem;font-size:.7rem;font-weight:600;color:#93c5fd;letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.6rem;backdrop-filter:blur(6px)}
+.live-hero-eyebrow .pulse{width:7px;height:7px;border-radius:50%;background:#60a5fa;box-shadow:0 0 0 0 rgba(96,165,250,.6);animation:livePulse 2s infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(96,165,250,.55)}70%{box-shadow:0 0 0 10px rgba(96,165,250,0)}100%{box-shadow:0 0 0 0 rgba(96,165,250,0)}}
+.live-hero h1{font-size:3.4rem;font-weight:800;line-height:1.05;letter-spacing:-.035em;margin-bottom:1.25rem;background:linear-gradient(135deg,#e2e8f0 0%,#93c5fd 45%,#a78bfa 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.live-hero p{font-size:1.1rem;color:#94a3b8;line-height:1.7;max-width:680px;margin:0 auto 1.6rem}
+.live-hero-actions{display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap}
+.live-hero-cta{display:inline-flex;align-items:center;gap:.55rem;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-weight:600;font-size:.85rem;padding:.65rem 1.3rem;border-radius:10px;border:none;cursor:pointer;transition:all .2s;box-shadow:0 8px 24px rgba(37,99,235,.35)}
+.live-hero-cta:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(37,99,235,.5)}
+.live-hero-ghost{display:inline-flex;align-items:center;gap:.5rem;background:transparent;color:#cbd5e1;font-weight:600;font-size:.85rem;padding:.65rem 1.3rem;border-radius:10px;border:1px solid #334155;cursor:pointer;transition:all .2s;text-decoration:none}
+.live-hero-ghost:hover{border-color:#60a5fa;color:#93c5fd}
+.live-hero-stats{display:flex;justify-content:center;gap:2rem;margin-top:2rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#475569;letter-spacing:.05em;flex-wrap:wrap}
+.live-hero-stats div{display:flex;align-items:center;gap:.4rem}
+.live-hero-stats div::before{content:'';width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981}
+.live-grid-wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:0 2rem 5rem}
+.live-section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.3rem;gap:1rem;flex-wrap:wrap}
+.live-section-title{font-size:1.05rem;font-weight:700;color:#e2e8f0;letter-spacing:-.01em}
+.live-section-sub{font-size:.78rem;color:#64748b}
+.live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+.live-card{position:relative;background:linear-gradient(180deg,rgba(13,18,32,.85),rgba(13,18,32,.55));border:1px solid #1e2d47;border-radius:14px;padding:1.5rem 1.5rem 1.4rem;cursor:pointer;transition:transform .25s,border-color .25s,box-shadow .25s;overflow:hidden;backdrop-filter:blur(6px)}
+.live-card::after{content:'';position:absolute;inset:-1px;border-radius:14px;background:linear-gradient(135deg,rgba(37,99,235,.45),rgba(167,139,250,.3),rgba(34,211,238,.25));opacity:0;transition:opacity .25s;z-index:-1}
+.live-card:hover{transform:translateY(-3px);border-color:transparent;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.live-card:hover::after{opacity:1}
+.live-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.live-card-tag{font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:.3rem .55rem;border-radius:6px;background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.25)}
+.live-card-tag.custom{background:rgba(167,139,250,.12);color:#c4b5fd;border-color:rgba(167,139,250,.3)}
+.live-card-arrow{color:#475569;font-size:1.1rem;transition:transform .2s,color .2s}
+.live-card:hover .live-card-arrow{color:#93c5fd;transform:translateX(3px)}
+.live-card h3{font-size:1.15rem;font-weight:700;color:#e2e8f0;margin-bottom:.55rem;line-height:1.25;letter-spacing:-.01em}
+.live-card p{font-size:.84rem;color:#94a3b8;line-height:1.6;margin-bottom:1rem}
+.live-card-meta{display:flex;gap:.5rem;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#64748b}
+.live-card-meta span{padding:.22rem .5rem;border:1px solid #1e2d47;border-radius:5px;background:#070c14}
+.live-card-delete{position:absolute;top:.85rem;right:.85rem;width:26px;height:26px;border-radius:6px;border:1px solid #1e2d47;background:#0d1220;color:#64748b;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:.95rem;line-height:1;z-index:2}
+.live-card:hover .live-card-delete{display:flex}
+.live-card-delete:hover{border-color:#7f1d1d;color:#f87171}
+.live-create{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:transparent;border:1.5px dashed #334155;border-radius:14px;padding:1.5rem;cursor:pointer;color:#64748b;transition:all .25s;min-height:200px}
+.live-create:hover{border-color:#60a5fa;color:#93c5fd;background:rgba(37,99,235,.05)}
+.live-create .icon{width:44px;height:44px;border-radius:12px;background:rgba(37,99,235,.12);color:#60a5fa;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:.85rem;border:1px solid rgba(96,165,250,.25)}
+.live-create:hover .icon{background:rgba(37,99,235,.2);color:#93c5fd}
+.live-create .label{font-size:.95rem;font-weight:700;color:#e2e8f0;margin-bottom:.3rem}
+.live-create .sub{font-size:.78rem;color:#64748b}
+body.light .live-home-bg{background:
+  radial-gradient(circle at 20% 10%,rgba(59,130,246,.12),transparent 45%),
+  radial-gradient(circle at 80% 20%,rgba(167,139,250,.1),transparent 50%),
+  radial-gradient(circle at 50% 95%,rgba(34,211,238,.08),transparent 55%)}
+body.light .live-home-bg::after{background-image:linear-gradient(rgba(15,23,42,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(15,23,42,.06) 1px,transparent 1px)}
+body.light .live-hero h1{background:linear-gradient(135deg,#0f172a 0%,#2563eb 45%,#7c3aed 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+body.light .live-hero p{color:#475569}
+body.light .live-hero-eyebrow{background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.18);color:#1d4ed8}
+body.light .live-hero-ghost{color:#475569;border-color:#e2e8f0}
+body.light .live-hero-ghost:hover{border-color:#2563eb;color:#1d4ed8}
+body.light .live-hero-stats{color:#64748b}
+body.light .live-section-title{color:#0f172a}
+body.light .live-card{background:#ffffff;border-color:#e2e8f0}
+body.light .live-card h3{color:#0f172a}
+body.light .live-card p{color:#475569}
+body.light .live-card-meta{color:#64748b}
+body.light .live-card-meta span{background:#f8fafc;border-color:#e2e8f0}
+body.light .live-card-tag{background:rgba(37,99,235,.06);color:#1d4ed8;border-color:rgba(37,99,235,.2)}
+body.light .live-card-tag.custom{background:rgba(124,58,237,.06);color:#7c3aed;border-color:rgba(124,58,237,.2)}
+body.light .live-create{background:#ffffff;border-color:#cbd5e1;color:#64748b}
+body.light .live-create:hover{border-color:#2563eb;color:#1d4ed8;background:#eff6ff}
+body.light .live-create .label{color:#0f172a}
+body.light .live-card-delete{background:#ffffff;border-color:#e2e8f0;color:#94a3b8}
+body.light .live-card-delete:hover{border-color:#fca5a5;color:#dc2626}
+@media (max-width:900px){.live-grid{grid-template-columns:repeat(2,1fr)}.live-hero h1{font-size:2.4rem}}
+@media (max-width:600px){.live-grid{grid-template-columns:1fr}.live-hero{padding:3rem 1.25rem 1.5rem}.live-hero h1{font-size:2rem}}
+
+/* ADMIN */
+.admin-filter-row{display:flex;gap:.4rem}
+.admin-filter{padding:.4rem .85rem;font-size:.75rem;font-weight:600;border-radius:8px;border:1px solid #1e2d47;background:transparent;color:#94a3b8;cursor:pointer;transition:all .2s}
+.admin-filter:hover{color:#e2e8f0;border-color:#334155}
+.admin-filter.active{background:#1a2740;border-color:#2563eb;color:#60a5fa}
+.admin-settings-card{background:rgba(13,18,32,.85);border:1px solid #1e2d47;border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;backdrop-filter:blur(6px)}
+.admin-settings-card h3{font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:.3rem}
+.admin-settings-card .sub{font-size:.78rem;color:#64748b;margin-bottom:1.1rem}
+.admin-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.admin-settings-grid .full{grid-column:1 / -1}
+.admin-save-status{font-size:.75rem;color:#10b981;display:none}
+.admin-save-status.show{display:inline}
+.admin-table{background:rgba(13,18,32,.85);border:1px solid #1e2d47;border-radius:14px;overflow:hidden;backdrop-filter:blur(6px)}
+.admin-row{display:grid;grid-template-columns:1fr 200px 110px 80px;gap:1rem;align-items:center;padding:.9rem 1.25rem;border-bottom:1px solid #1e2d47;transition:background .15s}
+.admin-row:last-child{border-bottom:none}
+.admin-row:hover{background:rgba(37,99,235,.06)}
+.admin-row-name{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.admin-row-title{font-size:.92rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.admin-row-sub{font-size:.7rem;color:#64748b;font-family:'JetBrains Mono',monospace}
+.admin-row-tags{display:flex;flex-wrap:wrap;gap:.35rem}
+.admin-tag-chip{font-size:.65rem;padding:.2rem .5rem;border-radius:5px;background:rgba(96,165,250,.1);color:#93c5fd;border:1px solid rgba(96,165,250,.2);font-family:'JetBrains Mono',monospace;letter-spacing:.04em}
+.admin-tag-chip.empty{background:transparent;color:#475569;border-style:dashed}
+.status-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .7rem;border-radius:999px}
+.status-badge.live{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.3)}
+.status-badge.draft{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.25)}
+.status-badge .dot{width:6px;height:6px;border-radius:50%}
+.status-badge.live .dot{background:#10b981;box-shadow:0 0 6px #10b981}
+.status-badge.draft .dot{background:#94a3b8}
+.admin-row-actions{display:flex;justify-content:flex-end;gap:.4rem}
+.admin-edit-btn{padding:.4rem .8rem;font-size:.75rem;font-weight:600;background:transparent;color:#94a3b8;border:1px solid #1e2d47;border-radius:6px;cursor:pointer;transition:all .2s}
+.admin-edit-btn:hover{color:#60a5fa;border-color:#2563eb}
+.admin-empty{padding:2rem;text-align:center;color:#64748b;font-size:.85rem}
+body.light .admin-settings-card{background:#ffffff;border-color:#e2e8f0}
+body.light .admin-settings-card h3{color:#0f172a}
+body.light .admin-settings-card .sub{color:#64748b}
+body.light .admin-table{background:#ffffff;border-color:#e2e8f0}
+body.light .admin-row{border-bottom-color:#f1f5f9}
+body.light .admin-row:hover{background:#f8fafc}
+body.light .admin-row-title{color:#0f172a}
+body.light .admin-row-sub{color:#64748b}
+body.light .admin-tag-chip{background:rgba(37,99,235,.08);color:#1d4ed8;border-color:rgba(37,99,235,.2)}
+body.light .admin-tag-chip.empty{background:transparent;color:#94a3b8}
+body.light .admin-filter{border-color:#e2e8f0;color:#64748b}
+body.light .admin-filter:hover{color:#0f172a;border-color:#cbd5e1}
+body.light .admin-filter.active{background:#eff6ff;border-color:#2563eb;color:#1d4ed8}
+body.light .admin-edit-btn{color:#64748b;border-color:#e2e8f0}
+body.light .admin-edit-btn:hover{color:#1d4ed8;border-color:#2563eb}
+body.light .status-badge.live{background:rgba(5,150,105,.1);color:#047857;border-color:rgba(5,150,105,.3)}
+body.light .status-badge.draft{background:rgba(100,116,139,.1);color:#475569;border-color:rgba(100,116,139,.2)}
+@media (max-width:900px){.admin-row{grid-template-columns:1fr 1fr;gap:.5rem}.admin-settings-grid{grid-template-columns:1fr}}
+
+/* CARD TAGS (live grid) */
+.live-card-tags{display:flex;flex-wrap:wrap;gap:.4rem}
+.live-card-tags .tag{font-size:.65rem;padding:.22rem .55rem;border-radius:5px;background:rgba(96,165,250,.12);color:#93c5fd;border:1px solid rgba(96,165,250,.22);font-family:'JetBrains Mono',monospace;letter-spacing:.04em}
+body.light .live-card-tags .tag{background:rgba(37,99,235,.08);color:#1d4ed8;border-color:rgba(37,99,235,.2)}
+
+/* AGENT MODAL */
+.agent-form-row{margin-bottom:1rem}
+.agent-form-row label{display:block;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;margin-bottom:.4rem}
+.agent-form-row input,.agent-form-row textarea,.agent-form-row select{width:100%;background:#070c14;border:1px solid #1e2d47;border-radius:8px;padding:.55rem .75rem;color:#e2e8f0;font-size:.85rem;font-family:inherit;outline:none;transition:border-color .2s}
+.agent-form-row textarea{resize:vertical;min-height:90px;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.55}
+.agent-form-row input:focus,.agent-form-row textarea:focus,.agent-form-row select:focus{border-color:#2563eb}
+.agent-form-row .hint{font-size:.7rem;color:#475569;margin-top:.3rem}
+.agent-form-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.25rem}
+.agent-form-error{color:#f87171;font-size:.8rem;margin-top:.5rem;min-height:1rem}
+body.light .agent-form-row label{color:#475569}
+body.light .agent-form-row input,body.light .agent-form-row textarea,body.light .agent-form-row select{background:#ffffff;border-color:#e2e8f0;color:#0f172a}
+body.light .agent-form-row input:focus,body.light .agent-form-row textarea:focus,body.light .agent-form-row select:focus{border-color:#2563eb}
+body.light .agent-form-row .hint{color:#64748b}
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="nav-brand" onclick="showHome()">
+  <div class="nav-brand" onclick="navigateHome()">
     <span class="dot"></span>
   </div>
   <div class="nav-actions">
-    <div class="nav-back hidden" id="nav-back" onclick="showHome()">← Back to scenarios</div>
+    <div class="nav-back hidden" id="nav-back" onclick="navigateBackFromDetail()">← Back</div>
+    <button class="theme-toggle" id="admin-btn" onclick="navigateAdmin()" aria-label="Admin" title="Admin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+      <span>Admin</span>
+    </button>
     <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
       <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       <span id="theme-label">Light</span>
@@ -390,37 +567,118 @@ body.light .left-toggle:hover,body.light .left-restore:hover{color:#0f172a;borde
 
 <!-- HOME PAGE -->
 <div id="home-page">
-  <div class="hero">
 
-    <h1 id="hero-title">ClickHouse In Financial Services<br><span>Agentic AI Demonstrator</span></h1>
-    <p id="hero-desc">Explore how AI agents analyse and query ClickHouse datasets across capital markets, retail banking, commercial banking, payments, compliance, wealth management, asset management, insurance, corporate finance, and valuation advisory — with example schemas, synthetic data, and sample Q&amp;A.</p>
-    <div class="hero-byline">By <a href="https://benjaminwootton.com" target="_blank">@benjaminwootton</a></div>
-    <div class="industry-switch" id="industry-switch">
-      <a href="/fs" class="industry-switch-item" data-industry="fs" onclick="navigateIndustry(event,'fs')">Financial Services</a>
-      <a href="/igaming" class="industry-switch-item" data-industry="igaming" onclick="navigateIndustry(event,'igaming')">iGaming</a>
-      <a href="/construction" class="industry-switch-item" data-industry="construction" onclick="navigateIndustry(event,'construction')">Construction</a>
+  <!-- LIVE HOME (curated /) -->
+  <div id="live-home" class="live-home">
+    <div class="live-home-bg"></div>
+    <div class="live-hero">
+      <div class="live-hero-eyebrow"><span class="pulse"></span><span id="live-hero-eyebrow">Live Agents · ClickHouse</span></div>
+      <h1 id="live-hero-title">AI agents that talk to your data.</h1>
+      <p id="live-hero-desc">A curated set of analytical agents wired into ClickHouse, ready to answer questions in plain English. Pick one to chat with — or build your own.</p>
+      <div class="hero-byline">By <a href="https://benjaminwootton.com" target="_blank">@benjaminwootton</a></div>
     </div>
-  </div>
-
-  <div class="tabs" id="filter-bar">
-    <div class="tab active" id="filter-all" onclick="setIndustryFilter('all')">All Scenarios</div>
-    <div class="industry-dropdown" id="industry-dropdown">
-      <div class="tab industry-trigger" id="industry-trigger" onclick="toggleIndustryMenu(event)">
-        <span id="industry-trigger-label">Filter by sector</span>
-        <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg>
+    <div class="live-grid-wrap">
+      <div class="live-section-head">
+        <div>
+          <div class="live-section-title">Featured Agents</div>
+          <div class="live-section-sub">Built-in scenarios and your saved agents</div>
+        </div>
       </div>
-      <div class="industry-menu" id="industry-menu"></div>
+      <div class="live-grid" id="live-grid"></div>
     </div>
   </div>
 
-  <div class="grid-wrap" id="grid-container"></div>
+  <!-- ADMIN HOME -->
+  <div id="admin-home" class="live-home hidden">
+    <div class="live-home-bg"></div>
+    <div class="live-hero" style="padding-top:3.5rem;padding-bottom:1.5rem">
+      <div class="live-hero-eyebrow"><span class="pulse"></span>Admin</div>
+      <h1 style="font-size:2.4rem">Site Administration</h1>
+      <p>Edit the home page copy and choose which agents are live or draft.</p>
+      <div class="live-hero-actions" style="margin-top:1.2rem">
+        <a class="live-hero-ghost" href="/" onclick="navigateHome(event)">← Back to home</a>
+      </div>
+    </div>
+    <div class="live-grid-wrap" style="max-width:1280px">
+      <div class="admin-settings-card">
+        <h3>Home Page</h3>
+        <div class="sub">These appear on the public landing page.</div>
+        <div class="admin-settings-grid">
+          <div class="agent-form-row">
+            <label>Eyebrow</label>
+            <input id="admin-set-eyebrow" type="text" maxlength="80">
+          </div>
+          <div class="agent-form-row">
+            <label>Title</label>
+            <input id="admin-set-title" type="text" maxlength="160">
+          </div>
+          <div class="agent-form-row full">
+            <label>Description</label>
+            <textarea id="admin-set-description" rows="3" maxlength="600"></textarea>
+          </div>
+        </div>
+        <div class="agent-form-actions" style="margin-top:.6rem">
+          <span class="admin-save-status" id="admin-set-status">Saved ✓</span>
+          <button class="explore-btn" onclick="saveAdminSiteSettings()">Save</button>
+        </div>
+      </div>
+
+      <div class="live-section-head">
+        <div>
+          <div class="live-section-title">Agents</div>
+          <div class="live-section-sub">Toggle live/draft and edit tags. Live agents appear on the home page.</div>
+        </div>
+        <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+          <div class="admin-filter-row">
+            <button class="admin-filter active" data-admin-filter="all" onclick="setAdminFilter('all')">All</button>
+            <button class="admin-filter" data-admin-filter="live" onclick="setAdminFilter('live')">Live</button>
+            <button class="admin-filter" data-admin-filter="draft" onclick="setAdminFilter('draft')">Draft</button>
+          </div>
+          <button class="explore-btn" onclick="openCreateAgentModal()" style="padding:.45rem 1rem">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+            New Agent
+          </button>
+        </div>
+      </div>
+      <div class="admin-table" id="admin-table"></div>
+    </div>
+  </div>
+
+  <!-- CATALOG HOME (industry pages) -->
+  <div id="catalog-home">
+    <div class="hero">
+      <h1 id="hero-title">ClickHouse In Financial Services<br><span>Agentic AI Demonstrator</span></h1>
+      <p id="hero-desc">Explore how AI agents analyse and query ClickHouse datasets across capital markets, retail banking, commercial banking, payments, compliance, wealth management, asset management, insurance, corporate finance, and valuation advisory — with example schemas, synthetic data, and sample Q&amp;A.</p>
+      <div class="hero-byline">By <a href="https://benjaminwootton.com" target="_blank">@benjaminwootton</a></div>
+      <div class="industry-switch" id="industry-switch">
+        <a href="/fs" class="industry-switch-item" data-industry="fs" onclick="navigateIndustry(event,'fs')">Financial Services</a>
+        <a href="/igaming" class="industry-switch-item" data-industry="igaming" onclick="navigateIndustry(event,'igaming')">iGaming</a>
+        <a href="/construction" class="industry-switch-item" data-industry="construction" onclick="navigateIndustry(event,'construction')">Construction</a>
+      </div>
+    </div>
+
+    <div class="tabs" id="filter-bar">
+      <div class="tab active" id="filter-all" onclick="setIndustryFilter('all')">All Scenarios</div>
+      <div class="industry-dropdown" id="industry-dropdown">
+        <div class="tab industry-trigger" id="industry-trigger" onclick="toggleIndustryMenu(event)">
+          <span id="industry-trigger-label">Filter by sector</span>
+          <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg>
+        </div>
+        <div class="industry-menu" id="industry-menu"></div>
+      </div>
+    </div>
+
+    <div class="grid-wrap" id="grid-container"></div>
+  </div>
 </div>
 
 <!-- DETAIL PAGE -->
 <div id="detail-page" class="hidden"></div>
 <div id="deploy-modal-root"></div>
+<div id="agent-modal-root"></div>
+<div id="agent-edit-modal-root"></div>
 
-<footer>ClickHouse Agentic AI Demonstrator &nbsp;·&nbsp; Built for client demonstrations</footer>
+<footer>ClickHouse Agentic AI Harness &nbsp;·&nbsp; By <a href="https://benjaminwootton.com" target="_blank">@benjaminwootton</a></footer>
 
 <script>
 const scenarios = [
@@ -8590,12 +8848,58 @@ const INDUSTRY_META = {
   }
 };
 let currentIndustry = 'fs';
+let currentMode = 'live'; // 'live' (curated /) or 'catalog' (/fs, /igaming, /construction)
+
+const LIVE_AGENT_IDS = new Set([
+  'trade-surveillance',
+  'fraud-detection',
+  'claims-fraud',
+  'aml-monitoring',
+  'merchant-acquiring',
+  'sportsbook-liability',
+  'tender-benchmarking'
+]);
+
+function detectModeFromUrl() {
+  const p = (location.pathname || '/').toLowerCase();
+  if (p === '/' || p === '') return { mode: 'live', industry: 'fs' };
+  if (p.startsWith('/admin')) return { mode: 'admin', industry: 'fs' };
+  if (p.startsWith('/igaming')) return { mode: 'catalog', industry: 'igaming' };
+  if (p.startsWith('/construction')) return { mode: 'catalog', industry: 'construction' };
+  if (p.startsWith('/fs')) return { mode: 'catalog', industry: 'fs' };
+  return { mode: 'live', industry: 'fs' };
+}
 
 function detectIndustryFromUrl() {
-  const p = (location.pathname || '/').toLowerCase();
-  if (p.startsWith('/igaming')) return 'igaming';
-  if (p.startsWith('/construction')) return 'construction';
-  return 'fs';
+  return detectModeFromUrl().industry;
+}
+
+function applyMode(mode, industry, opts) {
+  currentMode = mode;
+  const liveHome = document.getElementById('live-home');
+  const adminHome = document.getElementById('admin-home');
+  const catalogHome = document.getElementById('catalog-home');
+  liveHome.classList.toggle('hidden', mode !== 'live');
+  adminHome.classList.toggle('hidden', mode !== 'admin');
+  catalogHome.classList.toggle('hidden', mode !== 'catalog');
+  updateNavForMode(mode);
+  if (mode === 'live') {
+    if (opts && opts.push) history.pushState({mode:'live'}, '', '/');
+    renderLiveGrid();
+  } else if (mode === 'admin') {
+    if (opts && opts.push) history.pushState({mode:'admin'}, '', '/admin');
+    renderAdminView();
+  } else {
+    applyIndustry(industry || 'fs', opts);
+  }
+}
+
+function updateNavForMode(mode) {
+  const back = document.getElementById('nav-back');
+  const adminBtn = document.getElementById('admin-btn');
+  const detailOpen = !document.getElementById('detail-page').classList.contains('hidden');
+  if (back) back.classList.toggle('hidden', !(mode === 'admin' || detailOpen));
+  if (adminBtn) adminBtn.classList.toggle('hidden', mode === 'admin' && !detailOpen);
 }
 
 function applyIndustry(industry, opts) {
@@ -8617,7 +8921,7 @@ function applyIndustry(industry, opts) {
   if (trigger) trigger.classList.remove('active');
   if (label) label.textContent = 'Filter by sector';
   if (opts && opts.push) {
-    history.pushState({industry}, '', '/' + meta.slug);
+    history.pushState({industry,mode:'catalog'}, '', '/' + meta.slug);
   }
   renderIndustryMenu();
   renderGrid();
@@ -8625,12 +8929,19 @@ function applyIndustry(industry, opts) {
 
 function navigateIndustry(ev, industry) {
   if (ev) ev.preventDefault();
-  applyIndustry(industry, {push:true});
+  applyMode('catalog', industry, {push:true});
+  showHome();
+}
+
+function navigateHome(ev) {
+  if (ev) ev.preventDefault();
+  applyMode('live', null, {push:true});
   showHome();
 }
 
 window.addEventListener('popstate', () => {
-  applyIndustry(detectIndustryFromUrl());
+  const { mode, industry } = detectModeFromUrl();
+  applyMode(mode, industry);
   showHome();
 });
 
@@ -8746,9 +9057,11 @@ async function showDetail(id) {
 function renderScenarioDetail(s) {
   currentScenario = s;
   const agentName = s.title;
+  const exposeInternals = getEffectiveBuiltinExposeInternals(s);
+  const layoutClasses = `detail-layout left-collapsed${exposeInternals ? '' : ' internals-hidden'}`;
 
   document.getElementById('detail-page').innerHTML = `
-    <div class="detail-layout" id="detail-layout">
+    <div class="${layoutClasses}" id="detail-layout">
       <div class="detail-left detail" id="detail-left">
         <button class="left-toggle" onclick="toggleLeftPanel()" aria-label="Collapse panel" title="Collapse panel">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l-5 5 5 5"/></svg>
@@ -8794,6 +9107,7 @@ function renderScenarioDetail(s) {
   document.getElementById('home-page').classList.add('hidden');
   document.getElementById('detail-page').classList.remove('hidden');
   document.getElementById('nav-back').classList.remove('hidden');
+  updateNavForMode(currentMode);
 
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-header">
@@ -8802,50 +9116,58 @@ function renderScenarioDetail(s) {
       <p class="detail-desc">${longDescriptions[s.id] || s.description}</p>
     </div>
 
-    ${systemPrompts[s.id] ? `
+    ${(() => { const sp = getEffectiveBuiltinSystemPrompt(s); return sp ? `
     <div class="section">
-      <div class="section-head">
+      <div class="section-head foldable" onclick="toggleSection('prompt')">
         <div class="section-num">1</div>
         <div class="section-title">Agent System Prompt</div>
+        <svg id="sec-arrow-prompt" class="section-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l5 5 5-5"/></svg>
       </div>
-      <div class="system-prompt-block">${escHtml(systemPrompts[s.id])}</div>
-    </div>` : ''}
+      <div id="sec-body-prompt" style="display:none"><div class="system-prompt-block">${escHtml(sp)}</div></div>
+    </div>` : ''; })()}
 
     <div class="section">
-      <div class="section-head">
+      <div class="section-head foldable" onclick="toggleSection('questions')">
         <div class="section-num">2</div>
         <div class="section-title">Example Questions</div>
+        <svg id="sec-arrow-questions" class="section-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4l5 5 5-5"/></svg>
       </div>
-      <div class="qa-list">
-        ${s.qanda.slice(0, 4).map((qa, i) => `
-          <div class="qa-item">
-            <div class="qa-question">${qa.q}</div>
-            <button class="qa-send" onclick="sendScenarioQuestion(${i})" aria-label="Ask this question">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h8M8 3l5 5-5 5"/></svg>
-            </button>
-          </div>
-        `).join('')}
-        ${s.qanda.length > 4 ? `
-        <div class="qa-fade-wrap">
-          <div class="qa-item">
-            <div class="qa-question">${s.qanda[4].q}</div>
-            <button class="qa-send" onclick="sendScenarioQuestion(4)" aria-label="Ask this question">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h8M8 3l5 5-5 5"/></svg>
-            </button>
-          </div>
-        </div>
-        <button class="qa-more-btn" id="qa-more-btn" onclick="expandQA()">+ ${s.qanda.length - 5} more questions</button>
-        <div class="qa-extra" id="qa-extra" style="display:none">
-          ${s.qanda.slice(5).map((qa, i) => `
+      <div id="sec-body-questions" style="display:none"><div class="qa-list">
+        ${(() => {
+          const qs = getEffectiveBuiltinQuestions(s);
+          let html = qs.slice(0, 4).map((q, i) => `
             <div class="qa-item">
-              <div class="qa-question">${qa.q}</div>
-              <button class="qa-send" onclick="sendScenarioQuestion(${i + 5})" aria-label="Ask this question">
+              <div class="qa-question">${escHtml(q)}</div>
+              <button class="qa-send" onclick="sendScenarioQuestion(${i})" aria-label="Ask this question">
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h8M8 3l5 5-5 5"/></svg>
               </button>
-            </div>
-          `).join('')}
-        </div>` : ''}
-      </div>
+            </div>`).join('');
+          if (qs.length > 4) {
+            html += `
+              <div class="qa-fade-wrap">
+                <div class="qa-item">
+                  <div class="qa-question">${escHtml(qs[4])}</div>
+                  <button class="qa-send" onclick="sendScenarioQuestion(4)" aria-label="Ask this question">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h8M8 3l5 5-5 5"/></svg>
+                  </button>
+                </div>
+              </div>`;
+            if (qs.length > 5) {
+              html += `<button class="qa-more-btn" id="qa-more-btn" onclick="expandQA()">+ ${qs.length - 5} more questions</button>
+                <div class="qa-extra" id="qa-extra" style="display:none">
+                  ${qs.slice(5).map((q, i) => `
+                    <div class="qa-item">
+                      <div class="qa-question">${escHtml(q)}</div>
+                      <button class="qa-send" onclick="sendScenarioQuestion(${i + 5})" aria-label="Ask this question">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h8M8 3l5 5-5 5"/></svg>
+                      </button>
+                    </div>`).join('')}
+                </div>`;
+            }
+          }
+          return html;
+        })()}
+      </div></div>
     </div>
 
     <div class="section">
@@ -8889,7 +9211,7 @@ function renderScenarioDetail(s) {
     if (window.hljs) hljs.highlightElement(el);
   });
   // Ensure all foldable sections start collapsed
-  ['data','schema-vis','schema-sql','sample-data'].forEach(key => {
+  ['prompt','questions','data','schema-vis','schema-sql','sample-data'].forEach(key => {
     const body = document.getElementById('sec-body-' + key);
     const arrow = document.getElementById('sec-arrow-' + key);
     if (body) body.style.display = 'none';
@@ -9014,8 +9336,10 @@ function sendQuestionToChat(question) {
 }
 
 function sendScenarioQuestion(index) {
-  if (!currentScenario || !currentScenario.qanda || !currentScenario.qanda[index]) return;
-  sendQuestionToChat(currentScenario.qanda[index].q);
+  if (!currentScenario) return;
+  const qs = getEffectiveBuiltinQuestions(currentScenario);
+  if (!qs[index]) return;
+  sendQuestionToChat(qs[index]);
 }
 
 function sendMessage() {
@@ -9056,8 +9380,16 @@ function sendMessage() {
     sectorLabel: currentScenario.sectorLabel,
     description: currentScenario.description,
     schema: currentScenario.schema,
-    systemPrompt: systemPrompts[currentScenario.id] || null,
+    systemPrompt: getEffectiveBuiltinSystemPrompt(currentScenario),
     dbName: 'demo_' + currentScenario.id.replace(/-/g, '_')
+  } : null;
+
+  const customAgent = currentCustomAgent ? {
+    name: currentCustomAgent.name,
+    model: currentCustomAgent.model,
+    systemPrompt: currentCustomAgent.systemPrompt,
+    instanceId: currentCustomAgent.instanceId,
+    dbName: currentCustomAgent.dbName
   } : null;
 
   (async () => {
@@ -9088,7 +9420,7 @@ function sendMessage() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, scenario })
+        body: JSON.stringify({ message: text, scenario, customAgent })
       });
 
       const reader = response.body.getReader();
@@ -9194,9 +9526,25 @@ function showHome() {
   document.getElementById('home-page').classList.remove('hidden');
   document.getElementById('detail-page').classList.add('hidden');
   document.getElementById('detail-page').innerHTML = '';
-  document.getElementById('nav-back').classList.add('hidden');
   currentScenario = null;
+  currentCustomAgent = null;
+  if (currentMode === 'live') renderLiveGrid();
+  if (currentMode === 'admin') renderAdminView();
+  updateNavForMode(currentMode);
   window.scrollTo(0,0);
+}
+
+function navigateBackFromDetail() {
+  const detailOpen = !document.getElementById('detail-page').classList.contains('hidden');
+  if (detailOpen) {
+    if (currentMode === 'live') history.pushState({mode:'live'}, '', '/');
+    if (currentMode === 'admin') history.pushState({mode:'admin'}, '', '/admin');
+    showHome();
+    return;
+  }
+  if (currentMode === 'admin') {
+    navigateHome();
+  }
 }
 
 function escHtml(s) {
@@ -9247,8 +9595,607 @@ function toggleLeftPanel() {
   if (layout) layout.classList.toggle('left-collapsed');
 }
 
+// ─── CUSTOM AGENTS ──────────────────────────────────────────────────────────
+let customAgents = [];
+let availableInstances = [];
+let availableModels = [];
+let currentCustomAgent = null;
+
+let siteSettings = {
+  homeTitle: 'AI agents that talk to your data.',
+  homeDescription: 'A curated set of analytical agents wired into ClickHouse, ready to answer questions in plain English. Pick one to chat with — or build your own.',
+  homeEyebrow: 'Live Agents · ClickHouse'
+};
+let scenarioOverrides = {}; // { [scenarioId]: { status, tags } }
+let adminFilter = 'all';
+
+async function loadSiteSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    const data = await res.json();
+    siteSettings = { ...siteSettings, ...(data.settings || {}) };
+  } catch (err) {}
+  applySiteSettings();
+}
+
+async function loadScenarioOverrides() {
+  try {
+    const res = await fetch('/api/scenario-overrides');
+    const data = await res.json();
+    scenarioOverrides = {};
+    for (const o of (data.overrides || [])) {
+      scenarioOverrides[o.scenarioId] = {
+        status: o.status,
+        tags: o.tags,
+        systemPrompt: o.systemPrompt,
+        questions: o.questions,
+        exposeInternals: o.exposeInternals
+      };
+    }
+  } catch (err) {
+    scenarioOverrides = {};
+  }
+}
+
+function getEffectiveBuiltinQuestions(s) {
+  const ov = scenarioOverrides[s.id];
+  if (ov && Array.isArray(ov.questions) && ov.questions.length) return ov.questions;
+  return (s.qanda || []).map(q => q.q);
+}
+
+function getEffectiveBuiltinExposeInternals(s) {
+  const ov = scenarioOverrides[s.id];
+  if (ov && typeof ov.exposeInternals === 'boolean') return ov.exposeInternals;
+  return true;
+}
+
+function generateDefaultSystemPrompt(s) {
+  return `You are an AI analyst for the "${s.title}" scenario (${s.sectorLabel}). ${s.description}
+
+Always use the query_clickhouse tool to retrieve real data before answering. Present results as markdown tables, then provide concise analytical commentary highlighting the most important findings and what action is warranted.`;
+}
+
+function getEffectiveBuiltinSystemPrompt(s) {
+  const ov = scenarioOverrides[s.id];
+  if (ov && ov.systemPrompt) return ov.systemPrompt;
+  if (systemPrompts[s.id]) return systemPrompts[s.id];
+  return generateDefaultSystemPrompt(s);
+}
+
+function applySiteSettings() {
+  const t = document.getElementById('live-hero-title');
+  const d = document.getElementById('live-hero-desc');
+  const e = document.getElementById('live-hero-eyebrow');
+  if (t) t.textContent = siteSettings.homeTitle;
+  if (d) d.textContent = siteSettings.homeDescription;
+  if (e) e.textContent = siteSettings.homeEyebrow;
+}
+
+function getBuiltinDefaultStatus(s) {
+  return LIVE_AGENT_IDS.has(s.id) ? 'live' : 'draft';
+}
+
+function getEffectiveBuiltinStatus(s) {
+  const ov = scenarioOverrides[s.id];
+  if (ov && ov.status) return ov.status;
+  return getBuiltinDefaultStatus(s);
+}
+
+function getEffectiveBuiltinTags(s) {
+  const ov = scenarioOverrides[s.id];
+  if (ov && Array.isArray(ov.tags) && ov.tags.length) return ov.tags;
+  return s.sectorLabel ? [s.sectorLabel] : [];
+}
+
+function escAttr(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function saveAdminSiteSettings() {
+  const homeEyebrow = document.getElementById('admin-set-eyebrow').value.trim();
+  const homeTitle = document.getElementById('admin-set-title').value.trim();
+  const homeDescription = document.getElementById('admin-set-description').value.trim();
+  const statusEl = document.getElementById('admin-set-status');
+  statusEl.classList.remove('show');
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ homeEyebrow, homeTitle, homeDescription })
+    });
+    const data = await res.json();
+    if (data.settings) {
+      siteSettings = { ...siteSettings, ...data.settings };
+      applySiteSettings();
+    }
+    statusEl.textContent = 'Saved ✓';
+    statusEl.classList.add('show');
+    setTimeout(() => statusEl.classList.remove('show'), 2000);
+  } catch (e) {
+    statusEl.textContent = 'Failed';
+    statusEl.classList.add('show');
+  }
+}
+
+function setAdminFilter(filter) {
+  adminFilter = filter;
+  document.querySelectorAll('[data-admin-filter]').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-admin-filter') === filter);
+  });
+  renderAdminTable();
+}
+
+function renderAdminTable() {
+  const tableEl = document.getElementById('admin-table');
+  if (!tableEl) return;
+
+  const rows = [
+    ...scenarios.map(s => ({
+      kind: 'builtin',
+      id: s.id,
+      name: s.title,
+      subtitle: s.sectorLabel,
+      status: getEffectiveBuiltinStatus(s),
+      tags: getEffectiveBuiltinTags(s),
+      ref: s
+    })),
+    ...customAgents.map(a => ({
+      kind: 'custom',
+      id: a.id,
+      name: a.name,
+      subtitle: 'Custom · ' + a.dbName,
+      status: a.status === 'draft' ? 'draft' : 'live',
+      tags: a.tags || [],
+      ref: a
+    }))
+  ];
+
+  const filtered = adminFilter === 'all' ? rows : rows.filter(r => r.status === adminFilter);
+
+  if (!filtered.length) {
+    tableEl.innerHTML = '<div class="admin-empty">No agents match this filter.</div>';
+    return;
+  }
+
+  tableEl.innerHTML = filtered.map(r => `
+    <div class="admin-row">
+      <div class="admin-row-name">
+        <div class="admin-row-title">${escHtml(r.name)}</div>
+        <div class="admin-row-sub">${escHtml(r.subtitle || '')}</div>
+      </div>
+      <div class="admin-row-tags">
+        ${r.tags.length
+          ? r.tags.map(t => `<span class="admin-tag-chip">${escHtml(t)}</span>`).join('')
+          : '<span class="admin-tag-chip empty">no tags</span>'}
+      </div>
+      <div>
+        <span class="status-badge ${r.status}"><span class="dot"></span>${r.status}</span>
+      </div>
+      <div class="admin-row-actions">
+        <button class="admin-edit-btn" onclick="openAgentEditModal('${r.kind}','${escAttr(r.id)}')">Edit</button>
+      </div>
+    </div>`).join('');
+}
+
+function openAgentEditModal(kind, id) {
+  let entry;
+  if (kind === 'builtin') {
+    const s = scenarios.find(x => x.id === id);
+    if (!s) return;
+    entry = {
+      kind, id, name: s.title, subtitle: s.sectorLabel,
+      status: getEffectiveBuiltinStatus(s),
+      tags: getEffectiveBuiltinTags(s),
+      systemPrompt: getEffectiveBuiltinSystemPrompt(s) || '',
+      defaultPrompt: systemPrompts[s.id] || '',
+      questions: getEffectiveBuiltinQuestions(s) || [],
+      exposeInternals: getEffectiveBuiltinExposeInternals(s)
+    };
+  } else {
+    const a = customAgents.find(x => x.id === id);
+    if (!a) return;
+    entry = {
+      kind, id, name: a.name, subtitle: 'Custom · ' + a.dbName,
+      status: a.status === 'draft' ? 'draft' : 'live',
+      tags: a.tags || [],
+      systemPrompt: a.systemPrompt || '',
+      defaultPrompt: '',
+      questions: a.questions || [],
+      exposeInternals: a.exposeInternals !== false
+    };
+  }
+
+  const root = document.getElementById('agent-edit-modal-root');
+  root.innerHTML = `
+    <div class="deploy-modal" id="agent-edit-modal" onclick="handleAgentEditBackdrop(event)">
+      <div class="deploy-modal-card" style="width:min(680px,100%)">
+        <div class="deploy-modal-head">
+          <div>
+            <div class="deploy-modal-eyebrow">${escHtml(entry.subtitle)}</div>
+            <div class="deploy-modal-title">${escHtml(entry.name)}</div>
+          </div>
+          <button class="deploy-modal-close" onclick="closeAgentEditModal()" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 2l10 10M12 2L2 12"/></svg>
+          </button>
+        </div>
+        <div class="agent-form-row">
+          <label>Status</label>
+          <select id="edit-status">
+            <option value="live"${entry.status === 'live' ? ' selected' : ''}>Live</option>
+            <option value="draft"${entry.status === 'draft' ? ' selected' : ''}>Draft</option>
+          </select>
+          <div class="hint">Live agents appear on the home page.</div>
+        </div>
+        <div class="agent-form-row">
+          <label>Tags</label>
+          <input id="edit-tags" type="text" value="${escAttr(entry.tags.join(', '))}" placeholder="e.g. Capital Markets, Compliance">
+          <div class="hint">Comma-separated. Shown as chips on agent cards.</div>
+        </div>
+        <div class="agent-form-row">
+          <label>System Prompt${kind === 'builtin' ? ' <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0">(overrides the built-in)</span>' : ''}</label>
+          <textarea id="edit-system-prompt" rows="8" placeholder="${escAttr(entry.defaultPrompt || 'You are an analyst for…')}">${escHtml(entry.systemPrompt)}</textarea>
+          <div class="hint">${kind === 'builtin' ? 'Leave blank to use the built-in prompt.' : 'Defines how this agent behaves.'}</div>
+        </div>
+        <div class="agent-form-row">
+          <label>Example Questions</label>
+          <textarea id="edit-questions" rows="6" placeholder="One question per line…">${escHtml(entry.questions.join('\n'))}</textarea>
+          <div class="hint">One per line. Shown as clickable suggestions on the agent's detail page.</div>
+        </div>
+        <div class="agent-form-row">
+          <label style="display:flex;align-items:center;gap:.6rem;text-transform:none;letter-spacing:0;font-weight:600;cursor:pointer">
+            <input id="edit-expose-internals" type="checkbox" ${entry.exposeInternals ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer">
+            <span>Expose internal settings</span>
+          </label>
+          <div class="hint">When on, end users can open the left panel to see the system prompt, schema, sample data, and example questions. Turn off to hide internals from end users.</div>
+        </div>
+        <div class="agent-form-error" id="edit-error"></div>
+        <div class="agent-form-actions">
+          <button class="deploy-secondary" onclick="closeAgentEditModal()">Cancel</button>
+          <button class="explore-btn" onclick="saveAgentEdits('${kind}','${escAttr(id)}')">Save</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function handleAgentEditBackdrop(ev) {
+  if (ev.target && ev.target.id === 'agent-edit-modal') closeAgentEditModal();
+}
+
+function closeAgentEditModal() {
+  const root = document.getElementById('agent-edit-modal-root');
+  if (root) root.innerHTML = '';
+}
+
+async function saveAgentEdits(kind, id) {
+  const status = document.getElementById('edit-status').value;
+  const tags = document.getElementById('edit-tags').value.split(',').map(s => s.trim()).filter(Boolean);
+  const systemPrompt = document.getElementById('edit-system-prompt').value;
+  const questions = document.getElementById('edit-questions').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const exposeInternals = document.getElementById('edit-expose-internals').checked;
+  const err = document.getElementById('edit-error');
+  err.textContent = '';
+  try {
+    if (kind === 'builtin') {
+      const res = await fetch(`/api/scenario-overrides/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, tags, systemPrompt, questions, exposeInternals })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      scenarioOverrides[id] = {
+        status: data.status, tags: data.tags, systemPrompt: data.systemPrompt,
+        questions: data.questions, exposeInternals: data.exposeInternals
+      };
+    } else {
+      if (!systemPrompt.trim()) {
+        err.textContent = 'System prompt cannot be empty.';
+        return;
+      }
+      const res = await fetch(`/api/agents/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, tags, systemPrompt, questions, exposeInternals })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const idx = customAgents.findIndex(a => a.id === id);
+      if (idx >= 0) customAgents[idx] = { ...customAgents[idx], status, tags, systemPrompt, questions, exposeInternals };
+    }
+    closeAgentEditModal();
+    renderAdminTable();
+    if (currentMode === 'live') renderLiveGrid();
+  } catch (e) {
+    err.textContent = e.message || 'Failed to save';
+  }
+}
+
+function renderAdminView() {
+  document.getElementById('admin-set-eyebrow').value = siteSettings.homeEyebrow || '';
+  document.getElementById('admin-set-title').value = siteSettings.homeTitle || '';
+  document.getElementById('admin-set-description').value = siteSettings.homeDescription || '';
+  renderAdminTable();
+}
+
+function navigateAdmin(ev) {
+  if (ev) ev.preventDefault();
+  applyMode('admin', null, { push: true });
+  showHome();
+}
+
+async function loadCustomAgentsConfig() {
+  try {
+    const [instRes, modRes] = await Promise.all([
+      fetch('/api/clickhouse-instances'),
+      fetch('/api/models')
+    ]);
+    availableInstances = (await instRes.json()).instances || [];
+    availableModels = (await modRes.json()).models || [];
+  } catch (err) {
+    console.error('Failed to load agent config', err);
+  }
+}
+
+async function loadCustomAgents() {
+  try {
+    const res = await fetch('/api/agents');
+    const data = await res.json();
+    customAgents = data.agents || [];
+  } catch (err) {
+    customAgents = [];
+  }
+  if (currentMode === 'live') renderLiveGrid();
+}
+
+function renderLiveGrid() {
+  const grid = document.getElementById('live-grid');
+  if (!grid) return;
+  const liveBuiltins = scenarios.filter(s => getEffectiveBuiltinStatus(s) === 'live');
+  const liveCustoms = customAgents.filter(a => a.status !== 'draft');
+
+  const builtinCards = liveBuiltins.map(s => {
+    const tags = getEffectiveBuiltinTags(s);
+    return `
+      <div class="live-card" onclick="showDetail('${s.id}')">
+        <div class="live-card-top">
+          <div class="live-card-arrow">→</div>
+        </div>
+        <h3>${escHtml(s.title)}</h3>
+        <p>${escHtml((s.description || '').substring(0, 150))}${(s.description || '').length > 150 ? '…' : ''}</p>
+        <div class="live-card-tags">
+          ${tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+
+  const customCards = liveCustoms.map(a => {
+    const tags = (a.tags && a.tags.length) ? a.tags : ['Custom'];
+    return `
+      <div class="live-card" onclick="openCustomAgent('${a.id}')">
+        <button class="live-card-delete" onclick="event.stopPropagation();deleteCustomAgent('${a.id}')" aria-label="Delete agent" title="Delete agent">×</button>
+        <div class="live-card-top">
+          <div class="live-card-arrow">→</div>
+        </div>
+        <h3>${escHtml(a.name)}</h3>
+        <p>${escHtml((a.description || 'Custom user-defined agent.').substring(0, 150))}${(a.description || '').length > 150 ? '…' : ''}</p>
+        <div class="live-card-tags">
+          ${tags.map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+
+  grid.innerHTML = builtinCards + customCards;
+}
+
+function openCreateAgentModal() {
+  const root = document.getElementById('agent-modal-root');
+  const modelOpts = availableModels.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.label)}</option>`).join('');
+  const instOpts = availableInstances.map(i => `<option value="${escHtml(i.id)}">${escHtml(i.label)}</option>`).join('');
+  root.innerHTML = `
+    <div class="deploy-modal" id="agent-modal" onclick="handleAgentModalBackdrop(event)">
+      <div class="deploy-modal-card" style="width:min(720px,100%)">
+        <div class="deploy-modal-head">
+          <div>
+            <div class="deploy-modal-eyebrow">New Custom Agent</div>
+            <div class="deploy-modal-title">Create an Agent</div>
+          </div>
+          <button class="deploy-modal-close" onclick="closeAgentModal()" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 2l10 10M12 2L2 12"/></svg>
+          </button>
+        </div>
+        <div class="agent-form-row">
+          <label>Name</label>
+          <input id="agent-form-name" type="text" placeholder="e.g. Sales Pipeline Analyst" maxlength="120">
+        </div>
+        <div class="agent-form-row">
+          <label>Description</label>
+          <input id="agent-form-description" type="text" placeholder="What does this agent do?" maxlength="240">
+        </div>
+        <div class="agent-form-row">
+          <label>Model</label>
+          <select id="agent-form-model">${modelOpts}</select>
+        </div>
+        <div class="agent-form-row">
+          <label>ClickHouse Instance</label>
+          <select id="agent-form-instance">${instOpts}</select>
+          <div class="hint">Today only one instance is available (from .env). Multi-instance support is coming.</div>
+        </div>
+        <div class="agent-form-row">
+          <label>Database</label>
+          <input id="agent-form-db" type="text" placeholder="e.g. my_database">
+          <div class="hint">The ClickHouse database the agent will query.</div>
+        </div>
+        <div class="agent-form-row">
+          <label>Tags</label>
+          <input id="agent-form-tags" type="text" placeholder="e.g. Capital Markets, Compliance">
+          <div class="hint">Comma-separated. Shown as chips on the agent card.</div>
+        </div>
+        <div class="agent-form-row">
+          <label>System Prompt</label>
+          <textarea id="agent-form-prompt" rows="6" placeholder="You are an analyst for…"></textarea>
+        </div>
+        <div class="agent-form-error" id="agent-form-error"></div>
+        <div class="agent-form-actions">
+          <button class="deploy-secondary" onclick="closeAgentModal()">Cancel</button>
+          <button class="explore-btn" onclick="saveCustomAgent()">Create Agent</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function handleAgentModalBackdrop(ev) {
+  if (ev.target && ev.target.id === 'agent-modal') closeAgentModal();
+}
+
+function closeAgentModal() {
+  const root = document.getElementById('agent-modal-root');
+  if (root) root.innerHTML = '';
+}
+
+async function saveCustomAgent() {
+  const name = document.getElementById('agent-form-name').value.trim();
+  const description = document.getElementById('agent-form-description').value.trim();
+  const model = document.getElementById('agent-form-model').value;
+  const instanceId = document.getElementById('agent-form-instance').value;
+  const dbName = document.getElementById('agent-form-db').value.trim();
+  const systemPrompt = document.getElementById('agent-form-prompt').value.trim();
+  const tags = document.getElementById('agent-form-tags').value.split(',').map(s => s.trim()).filter(Boolean);
+  const err = document.getElementById('agent-form-error');
+  err.textContent = '';
+  if (!name || !model || !instanceId || !dbName || !systemPrompt) {
+    err.textContent = 'Name, model, instance, database, and system prompt are required.';
+    return;
+  }
+  try {
+    const res = await fetch('/api/agents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description, model, instanceId, dbName, systemPrompt, tags })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      err.textContent = data.error || `Failed to create agent (HTTP ${res.status})`;
+      return;
+    }
+    closeAgentModal();
+    await loadCustomAgents();
+  } catch (e) {
+    err.textContent = e.message || 'Network error';
+  }
+}
+
+async function deleteCustomAgent(id) {
+  const agent = customAgents.find(a => a.id === id);
+  if (!agent) return;
+  if (!confirm(`Delete agent "${agent.name}"?`)) return;
+  try {
+    await fetch(`/api/agents/${id}`, { method: 'DELETE' });
+    await loadCustomAgents();
+  } catch (e) {
+    alert('Failed to delete: ' + e.message);
+  }
+}
+
+function openCustomAgent(id) {
+  const agent = customAgents.find(a => a.id === id);
+  if (!agent) return;
+  currentCustomAgent = agent;
+  currentScenario = null;
+  renderCustomAgentDetail(agent);
+}
+
+function renderCustomAgentDetail(agent) {
+  const modelLabel = (availableModels.find(m => m.id === agent.model) || {}).label || agent.model;
+  const instLabel = (availableInstances.find(i => i.id === agent.instanceId) || {}).label || agent.instanceId;
+  const exposeInternals = agent.exposeInternals !== false;
+  const layoutClasses = `detail-layout left-collapsed${exposeInternals ? '' : ' internals-hidden'}`;
+  document.getElementById('detail-page').innerHTML = `
+    <div class="${layoutClasses}" id="detail-layout">
+      <div class="detail-left detail" id="detail-left">
+        <button class="left-toggle" onclick="toggleLeftPanel()" aria-label="Collapse panel" title="Collapse panel">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l-5 5 5 5"/></svg>
+        </button>
+        <div id="detail-content">
+          <div class="detail-header">
+            <div class="detail-sector cm">Custom Agent</div>
+            <h2>${escHtml(agent.name)}</h2>
+            <p class="detail-desc">${escHtml(agent.description || 'Custom user-defined agent.')}</p>
+          </div>
+          <div class="section">
+            <div class="section-head">
+              <div class="section-num">1</div>
+              <div class="section-title">Configuration</div>
+            </div>
+            <div class="erd-grid" style="display:block">
+              <div class="erd-table">
+                <div class="erd-table-header">Model</div>
+                <div class="erd-col"><span class="erd-col-name">${escHtml(modelLabel)}</span></div>
+              </div>
+              <div class="erd-table" style="margin-top:.6rem">
+                <div class="erd-table-header">ClickHouse</div>
+                <div class="erd-col"><span class="erd-col-name">Instance</span><span class="erd-col-type">${escHtml(instLabel)}</span></div>
+                <div class="erd-col"><span class="erd-col-name">Database</span><span class="erd-col-type">${escHtml(agent.dbName)}</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-head">
+              <div class="section-num">2</div>
+              <div class="section-title">System Prompt</div>
+            </div>
+            <div class="system-prompt-block">${escHtml(agent.systemPrompt)}</div>
+          </div>
+        </div>
+      </div>
+      <button class="left-restore" onclick="toggleLeftPanel()" aria-label="Expand panel" title="Expand panel">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>
+      </button>
+      <div class="detail-right" id="chat-panel">
+        <div class="chat-header">
+          <div class="chat-header-icon">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1a7 7 0 100 14A7 7 0 008 1z"/><path d="M5.5 6.5h.01M8 6.5h.01M10.5 6.5h.01"/><path d="M5 10s.8 1.5 3 1.5S11 10 11 10"/></svg>
+          </div>
+          <div class="chat-header-text">
+            <h3>${escHtml(agent.name)}</h3>
+            <p>${escHtml(modelLabel)} · ${escHtml(instLabel)} · ${escHtml(agent.dbName)}</p>
+          </div>
+          <div class="chat-status"><div class="chat-status-dot"></div>Ready</div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-empty" id="chat-empty">
+            <div class="chat-empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </div>
+            <h4>Ask anything</h4>
+            <p>This agent will query ClickHouse and answer in plain English.</p>
+          </div>
+        </div>
+        <div class="chat-input-wrap">
+          <div class="chat-input-row">
+            <textarea class="chat-input-box" id="chat-input" rows="1" placeholder="Ask a question…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="chat-send" onclick="sendMessage()">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2L2 6.5l5 2 2 5L14 2z"/></svg>
+            </button>
+          </div>
+          <div class="chat-hint">${escHtml(modelLabel)} on Fireworks · Press Enter to send</div>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('home-page').classList.add('hidden');
+  document.getElementById('detail-page').classList.remove('hidden');
+  document.getElementById('nav-back').classList.remove('hidden');
+  updateNavForMode(currentMode);
+  document.getElementById('detail-left') && document.getElementById('detail-left').scrollTo(0,0);
+}
+
 // Init
-applyIndustry(detectIndustryFromUrl());
+(async () => {
+  await Promise.all([loadSiteSettings(), loadCustomAgentsConfig(), loadScenarioOverrides()]);
+  await loadCustomAgents();
+  if (currentMode === 'live') renderLiveGrid();
+  if (currentMode === 'admin') renderAdminView();
+})();
+const initMode = detectModeFromUrl();
+applyMode(initMode.mode, initMode.industry);
 </script>
 
 <!-- Highlight.js -->
