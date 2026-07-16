@@ -80,6 +80,40 @@ function normalizeTags(input) {
   return [];
 }
 
+function loadProviders() {
+  const providers = [];
+  for (let i = 1; i <= 5; i++) {
+    const name    = (process.env[`PROVIDER_${i}_NAME`]     || '').trim();
+    const apiKey  = (process.env[`PROVIDER_${i}_API_KEY`]  || '').trim();
+    const baseUrl = (process.env[`PROVIDER_${i}_BASE_URL`] || '').trim();
+    const model   = (process.env[`PROVIDER_${i}_MODEL`]    || '').trim();
+    if (!name || !baseUrl || !model) continue;
+    providers.push({
+      id: `provider-${i}`,
+      slot: i,
+      name,
+      apiKey: apiKey || 'not-required',
+      baseUrl,
+      model,
+      client: new OpenAI({ apiKey: apiKey || 'not-required', baseURL: baseUrl })
+    });
+  }
+  return providers;
+}
+const PROVIDERS = loadProviders();
+const PROVIDERS_BY_ID = Object.fromEntries(PROVIDERS.map(p => [p.id, p]));
+const PROVIDERS_BY_MODEL = Object.fromEntries(PROVIDERS.map(p => [p.model, p]));
+function resolveProvider(requested) {
+  return PROVIDERS_BY_ID[requested] || PROVIDERS_BY_MODEL[requested] || PROVIDERS[0];
+}
+if (PROVIDERS.length === 0) {
+  throw new Error('No LLM providers configured. Set at least PROVIDER_1_NAME, PROVIDER_1_BASE_URL, and PROVIDER_1_MODEL in .env.');
+}
+for (const p of PROVIDERS) {
+  console.log(`[llm] provider slot=${p.slot} id=${p.id} name=${p.name} model=${p.model} baseURL=${p.baseUrl}`);
+}
+const DEFAULT_MODEL_ID = PROVIDERS[0].id;
+
 // Seed default ClickHouse instance from .env if empty
 {
   const count = db.prepare('SELECT COUNT(*) AS c FROM clickhouse_instances').get().c;
@@ -109,7 +143,7 @@ function normalizeTags(input) {
                           agent_schema, sample_data, allow_deploy, is_builtin, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const fwModel = process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/deepseek-v4-pro';
+    const defaultModelId = PROVIDERS[0]?.id || 'provider-1';
     const now = Date.now();
     let inserted = 0;
     for (const a of seed) {
@@ -121,7 +155,7 @@ function normalizeTags(input) {
         a.longDescription || null,
         a.sector || null,
         a.sectorLabel || null,
-        fwModel,
+        defaultModelId,
         a.systemPrompt || `You are an AI analyst for ${a.name}.`,
         'default',
         `demo_${a.id.replace(/-/g, '_')}`,
@@ -176,35 +210,12 @@ const CLICKHOUSE_INSTANCES = [
 ];
 const instancesById = Object.fromEntries(CLICKHOUSE_INSTANCES.map(i => [i.id, i]));
 
-const FIREWORKS_MODELS = [
-  { id: 'accounts/fireworks/models/deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
-  { id: 'accounts/fireworks/models/deepseek-v3p1', label: 'DeepSeek V3.1' },
-  { id: 'accounts/fireworks/models/llama-v3p3-70b-instruct', label: 'Llama 3.3 70B' },
-  { id: 'accounts/fireworks/models/llama-v3p1-405b-instruct', label: 'Llama 3.1 405B' },
-  { id: 'accounts/fireworks/models/qwen2p5-72b-instruct', label: 'Qwen 2.5 72B' },
-  { id: 'accounts/fireworks/models/mixtral-8x22b-instruct', label: 'Mixtral 8x22B' },
-  { id: 'accounts/fireworks/models/gpt-oss-120b', label: 'GPT-OSS 120B' }
-];
-
 const INDUSTRY_PATHS = ['/', '/fs', '/igaming', '/construction', '/admin'];
 for (const p of INDUSTRY_PATHS) {
   app.get(p, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'website', 'index.html'));
   });
 }
-
-const fireworksApiKey = process.env.FIREWORKS_API_KEY;
-if (!fireworksApiKey) {
-  throw new Error('Missing FIREWORKS_API_KEY. Set it in .env and pass it into the container runtime.');
-}
-
-const client = new OpenAI({
-  apiKey: fireworksApiKey,
-  baseURL: process.env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1'
-});
-const MODEL = process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/deepseek-v4-pro';
-const BASE_URL = process.env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1';
-console.log(`[llm] provider=fireworks model=${MODEL} baseURL=${BASE_URL}`);
 
 const langfuse = (process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY)
   ? new Langfuse({
@@ -403,7 +414,14 @@ app.get('/api/clickhouse-instances', (req, res) => {
 });
 
 app.get('/api/models', (req, res) => {
-  res.json({ models: FIREWORKS_MODELS });
+  res.json({
+    models: PROVIDERS.map(p => ({
+      id: p.id,
+      label: `${p.name} — ${p.model}`,
+      provider: p.name,
+      model: p.model
+    }))
+  });
 });
 
 function rowToAgent(r) {
@@ -493,6 +511,7 @@ app.patch('/api/agents/:id', (req, res) => {
   if (req.body && req.body.allowDeploy !== undefined) {
     sets.push('allow_deploy = ?'); args.push(req.body.allowDeploy ? 1 : 0);
   }
+  if (typeof req.body?.model === 'string' && req.body.model.trim()) { sets.push('model = ?'); args.push(req.body.model.trim()); }
   if (typeof req.body?.schema === 'string') { sets.push('agent_schema = ?'); args.push(req.body.schema); }
   if (typeof req.body?.sampleData === 'string') { sets.push('sample_data = ?'); args.push(req.body.sampleData); }
   if (typeof req.body?.longDescription === 'string') { sets.push('long_description = ?'); args.push(req.body.longDescription); }
@@ -514,7 +533,10 @@ app.post('/api/chat', async (req, res) => {
 
   const instanceId = customAgent?.instanceId || 'default';
   const dbName = customAgent?.dbName || scenario?.dbName || null;
-  const requestedModel = customAgent?.model || MODEL;
+  const requestedModel = customAgent?.model || DEFAULT_MODEL_ID;
+  const provider = resolveProvider(requestedModel);
+  const client = provider.client;
+  const targetModel = provider.model;
 
   let baseSystem;
   if (customAgent?.systemPrompt) {
@@ -531,7 +553,7 @@ app.post('/api/chat', async (req, res) => {
 
   const systemPrompt = customAgent
     ? `${baseSystem}\n\nYou have access to a ClickHouse database named '${dbName}'. Always use the query_clickhouse tool to retrieve real data before answering. Present tabular results as markdown tables.`
-    : `${baseSystem}\n\nYou are DeepSeek V4 Pro running on Fireworks AI (not Claude, not GPT). If asked what model you are or who hosts you, answer truthfully: "DeepSeek V4 Pro, served by Fireworks AI."\n\nAlways use the query_clickhouse tool to retrieve real data before answering. Present results as markdown tables. If a query fails because the database doesn't exist, tell the user to click "Deploy This Example" first.`;
+    : `${baseSystem}\n\nYou are ${provider.model} served by ${provider.name}. If asked what model you are or who hosts you, answer truthfully with those names.\n\nAlways use the query_clickhouse tool to retrieve real data before answering. Present results as markdown tables. If a query fails because the database doesn't exist, tell the user to click "Deploy This Example" first.`;
 
   const tools = [{
     type: 'function',
@@ -568,6 +590,8 @@ app.post('/api/chat', async (req, res) => {
       sector: scenario?.sectorLabel,
       customAgent: customAgent?.name,
       model: requestedModel,
+      provider: provider.name,
+      resolvedModel: targetModel,
       instanceId,
       dbName
     }
@@ -576,8 +600,8 @@ app.post('/api/chat', async (req, res) => {
   const streamLLM = async (messages) => {
     for (let attempt = 0; attempt < 4; attempt++) {
       const generation = trace ? trace.generation({
-        name: 'fireworks.chat.completions',
-        model: requestedModel,
+        name: `${provider.name}.chat.completions`,
+        model: targetModel,
         modelParameters: { max_tokens: 12000 },
         input: { messages, tools }
       }) : null;
@@ -585,7 +609,7 @@ app.post('/api/chat', async (req, res) => {
       let tFirstByte = null;
       try {
         const stream = await client.chat.completions.create({
-          model: requestedModel,
+          model: targetModel,
           max_tokens: 12000,
           stream: true,
           tools,
@@ -593,7 +617,7 @@ app.post('/api/chat', async (req, res) => {
           messages
         });
         const tHeaders = Date.now();
-        console.log(`[chat] llm headers=${tHeaders - tStart}ms attempt=${attempt} model=${requestedModel}`);
+        console.log(`[chat] llm headers=${tHeaders - tStart}ms attempt=${attempt} provider=${provider.name} model=${targetModel}`);
 
         let assembledText = '';
         let assembledReasoning = '';
@@ -739,7 +763,7 @@ app.post('/api/chat', async (req, res) => {
     send({ type: 'done' });
     res.end();
   } catch (err) {
-    console.error('Fireworks error:', err.message);
+    console.error(`${provider.name} error:`, err.message);
     if (trace) {
       trace.update({ output: err.message, metadata: { error: true } });
       await langfuse.flushAsync().catch(() => {});

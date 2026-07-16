@@ -206,6 +206,7 @@ pre{background:#070c14;border:1px solid #1e2d47;border-radius:10px;padding:1.2re
 .qa-item{background:#0d1220;border:1px solid #1e2d47;border-radius:10px;padding:.9rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
 .qa-fade-wrap{position:relative}
 .qa-fade-wrap::after{content:'';position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,#0b0f1a);pointer-events:none}
+.qa-fade-wrap.expanded::after{display:none}
 .qa-more-btn{margin-top:.6rem;background:none;border:1px solid #1e2d47;border-radius:8px;color:#60a5fa;font-size:.78rem;font-weight:600;padding:.45rem 1rem;cursor:pointer;width:100%;transition:all .2s}
 .qa-more-btn:hover{border-color:#2563eb;background:#0d1220}
 .qa-extra{display:flex;flex-direction:column;gap:.75rem;margin-top:.75rem}
@@ -729,6 +730,7 @@ function buildSampleDataOnly(s) {
 function expandQA() {
   document.getElementById('qa-extra').style.display = 'flex';
   document.getElementById('qa-more-btn').style.display = 'none';
+  document.querySelectorAll('#sec-body-questions .qa-fade-wrap').forEach(el => el.classList.add('expanded'));
 }
 
 function toggleSection(key) {
@@ -1096,9 +1098,21 @@ async function openAgent(id) {
 const showDetail = openAgent;
 const openCustomAgent = openAgent;
 
+function modelLabelFor(modelId) {
+  const m = (availableModels || []).find(x => x.id === modelId || x.model === modelId);
+  if (m) return `${m.provider || ''}${m.provider && m.model ? ' · ' : ''}${m.model || m.label || ''}`.trim();
+  return modelId || 'LLM';
+}
+function modelShortName(modelId) {
+  const m = (availableModels || []).find(x => x.id === modelId || x.model === modelId);
+  return (m && m.provider) || (m && m.label) || modelId || 'LLM';
+}
+
 function renderAgentDetail(s) {
   currentAgent = s;
   const agentName = s.name;
+  const modelLabel = modelLabelFor(s.model);
+  const modelShort = modelShortName(s.model);
   const exposeInternals = s.exposeInternals !== false;
   const layoutClasses = `detail-layout${exposeInternals ? '' : ' internals-hidden'}`;
   const hasSchema = !!(s.schema && s.schema.trim());
@@ -1123,7 +1137,7 @@ function renderAgentDetail(s) {
           </div>
           <div class="chat-header-text">
             <h3>${agentName}</h3>
-            <p>Powered by ClickHouse · DeepSeek V4 Pro on Fireworks</p>
+            <p>Powered by ClickHouse · ${escHtml(modelLabel)}</p>
           </div>
           <div class="chat-status"><div class="chat-status-dot"></div>Ready</div>
         </div>
@@ -1143,7 +1157,7 @@ function renderAgentDetail(s) {
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2L2 6.5l5 2 2 5L14 2z"/></svg>
             </button>
           </div>
-          <div class="chat-hint">Powered by DeepSeek V4 Pro on Fireworks · Press Enter to send</div>
+          <div class="chat-hint">Powered by ${escHtml(modelLabel)} · Press Enter to send</div>
         </div>
       </div>
     </div>
@@ -1463,7 +1477,7 @@ function sendMessage() {
           </div>
           <div id="${typingId}-queries"></div>
           <div class="msg-bubble" id="${typingId}-reply"></div>
-          <div class="msg-meta">DeepSeek · just now</div>
+          <div class="msg-meta">${escHtml(modelShortName(currentAgent?.model))} · just now</div>
         </div>`;
     };
 
@@ -1765,6 +1779,7 @@ function openAgentEditModal(id) {
     subtitle: a.sectorLabel || (a.isBuiltin ? 'Built-in' : 'Custom · ' + a.dbName),
     status: a.status === 'draft' ? 'draft' : 'live',
     tags: a.tags || [],
+    model: a.model || '',
     systemPrompt: a.systemPrompt || '',
     questions: a.questions || [],
     exposeInternals: a.exposeInternals !== false,
@@ -1772,11 +1787,14 @@ function openAgentEditModal(id) {
     schema: a.schema || '',
     sampleData: a.sampleData || ''
   };
+  const modelOpts = availableModels.map(m =>
+    `<option value="${escAttr(m.id)}"${m.id === entry.model ? ' selected' : ''}>${escHtml(m.label)}</option>`
+  ).join('');
 
   const root = document.getElementById('agent-edit-modal-root');
   root.innerHTML = `
     <div class="deploy-modal" id="agent-edit-modal" onclick="handleAgentEditBackdrop(event)">
-      <div class="deploy-modal-card" style="width:min(720px,100%);max-height:85vh;overflow-y:auto">
+      <div class="deploy-modal-card" style="width:min(1080px,100%);max-height:85vh;overflow-y:auto">
         <div class="deploy-modal-head">
           <div>
             <div class="deploy-modal-eyebrow">${escHtml(entry.subtitle)}</div>
@@ -1793,6 +1811,11 @@ function openAgentEditModal(id) {
             <option value="draft"${entry.status === 'draft' ? ' selected' : ''}>Draft</option>
           </select>
           <div class="hint">Live agents appear on the home page.</div>
+        </div>
+        <div class="agent-form-row">
+          <label>Model</label>
+          <select id="edit-model">${modelOpts}</select>
+          <div class="hint">Provider slots come from PROVIDER_1..5_* in .env.</div>
         </div>
         <div class="agent-form-row">
           <label>Tags</label>
@@ -1852,6 +1875,7 @@ function closeAgentEditModal() {
 
 async function saveAgentEdits(id) {
   const status = document.getElementById('edit-status').value;
+  const model = document.getElementById('edit-model')?.value || '';
   const tags = document.getElementById('edit-tags').value.split(',').map(s => s.trim()).filter(Boolean);
   const systemPrompt = document.getElementById('edit-system-prompt').value;
   const questions = document.getElementById('edit-questions').value.split('\n').map(s => s.trim()).filter(Boolean);
@@ -1869,11 +1893,11 @@ async function saveAgentEdits(id) {
     const res = await fetch(`/api/agents/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, tags, systemPrompt, questions, exposeInternals, allowDeploy, schema, sampleData })
+      body: JSON.stringify({ status, model, tags, systemPrompt, questions, exposeInternals, allowDeploy, schema, sampleData })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const idx = customAgents.findIndex(a => a.id === id);
-    if (idx >= 0) customAgents[idx] = { ...customAgents[idx], status, tags, systemPrompt, questions, exposeInternals, allowDeploy, schema, sampleData };
+    if (idx >= 0) customAgents[idx] = { ...customAgents[idx], status, model, tags, systemPrompt, questions, exposeInternals, allowDeploy, schema, sampleData };
     closeAgentEditModal();
     renderAdminTable();
     if (currentMode === 'live') renderLiveGrid();
@@ -1948,7 +1972,7 @@ function openCreateAgentModal() {
   const instOpts = availableInstances.map(i => `<option value="${escHtml(i.id)}">${escHtml(i.label)}</option>`).join('');
   root.innerHTML = `
     <div class="deploy-modal" id="agent-modal" onclick="handleAgentModalBackdrop(event)">
-      <div class="deploy-modal-card" style="width:min(720px,100%)">
+      <div class="deploy-modal-card" style="width:min(1080px,100%)">
         <div class="deploy-modal-head">
           <div>
             <div class="deploy-modal-eyebrow">New Custom Agent</div>
