@@ -180,7 +180,12 @@ body.light .industry-switch-item.active{background:#eff6ff;border-color:#2563eb;
 .chat-send{width:36px;height:36px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;box-shadow:0 2px 8px rgba(37,99,235,.3)}
 .chat-send:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.45)}
 .chat-send svg{width:15px;height:15px;color:#fff}
-.chat-hint{font-size:.67rem;color:#1e2d47;margin-top:.5rem;text-align:center}
+.chat-hint{font-size:.67rem;color:#1e2d47;margin-top:.5rem;text-align:center;display:flex;justify-content:center;align-items:center;gap:.35rem;flex-wrap:wrap}
+.chat-model-select{font:inherit;color:#60a5fa;background:transparent;border:1px solid #1e2d47;border-radius:5px;padding:.15rem .4rem;cursor:pointer;max-width:280px}
+.chat-model-select:hover{border-color:#2563eb}
+.chat-model-select:focus{outline:none;border-color:#2563eb}
+body.light .chat-model-select{color:#1d4ed8;border-color:#e2e8f0}
+body.light .chat-model-select:hover{border-color:#2563eb}
 
 /* SECTIONS */
 .section{margin-bottom:2rem}
@@ -539,7 +544,10 @@ body.light .admin-edit-btn{color:#64748b;border-color:#e2e8f0}
 body.light .admin-edit-btn:hover{color:#1d4ed8;border-color:#2563eb}
 body.light .status-badge.live{background:rgba(5,150,105,.1);color:#047857;border-color:rgba(5,150,105,.3)}
 body.light .status-badge.draft{background:rgba(100,116,139,.1);color:#475569;border-color:rgba(100,116,139,.2)}
-@media (max-width:900px){.admin-row{grid-template-columns:1fr 1fr;gap:.5rem}.admin-settings-grid{grid-template-columns:1fr}}
+.admin-provider-row{grid-template-columns:220px 1fr 1fr 160px}
+.admin-provider-row .admin-row-mono{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.light .admin-provider-row .admin-row-mono{color:#475569}
+@media (max-width:900px){.admin-row{grid-template-columns:1fr 1fr;gap:.5rem}.admin-provider-row{grid-template-columns:1fr 1fr}.admin-settings-grid{grid-template-columns:1fr}}
 
 /* CARD TAGS (live grid) */
 .live-card-tags{display:flex;flex-wrap:wrap;gap:.4rem}
@@ -614,47 +622,99 @@ body.light .agent-form-row .hint{color:#64748b}
       </div>
     </div>
     <div class="live-grid-wrap" style="max-width:1280px">
-      <div class="admin-settings-card">
-        <h3>Home Page</h3>
-        <div class="sub">These appear on the public landing page.</div>
-        <div class="admin-settings-grid">
-          <div class="agent-form-row">
-            <label>Eyebrow</label>
-            <input id="admin-set-eyebrow" type="text" maxlength="80">
+      <div class="tabs" style="justify-content:flex-start;margin-bottom:1.5rem">
+        <div class="tab active" data-admin-tab="home" onclick="setAdminTab('home')">Home Page Config</div>
+        <div class="tab" data-admin-tab="agents" onclick="setAdminTab('agents')">Agents</div>
+        <div class="tab" data-admin-tab="providers" onclick="setAdminTab('providers')">Providers</div>
+        <div class="tab" data-admin-tab="observability" onclick="setAdminTab('observability')">Observability</div>
+      </div>
+
+      <div id="admin-tab-home" class="admin-tab-panel">
+        <div class="admin-settings-card">
+          <h3>Home Page</h3>
+          <div class="sub">These appear on the public landing page.</div>
+          <div class="admin-settings-grid">
+            <div class="agent-form-row">
+              <label>Eyebrow</label>
+              <input id="admin-set-eyebrow" type="text" maxlength="80">
+            </div>
+            <div class="agent-form-row">
+              <label>Title</label>
+              <input id="admin-set-title" type="text" maxlength="160">
+            </div>
+            <div class="agent-form-row full">
+              <label>Description</label>
+              <textarea id="admin-set-description" rows="3" maxlength="600"></textarea>
+            </div>
           </div>
-          <div class="agent-form-row">
-            <label>Title</label>
-            <input id="admin-set-title" type="text" maxlength="160">
+          <div class="agent-form-actions" style="margin-top:.6rem">
+            <span class="admin-save-status" id="admin-set-status">Saved ✓</span>
+            <button class="explore-btn" onclick="saveAdminSiteSettings()">Save</button>
           </div>
-          <div class="agent-form-row full">
-            <label>Description</label>
-            <textarea id="admin-set-description" rows="3" maxlength="600"></textarea>
-          </div>
-        </div>
-        <div class="agent-form-actions" style="margin-top:.6rem">
-          <span class="admin-save-status" id="admin-set-status">Saved ✓</span>
-          <button class="explore-btn" onclick="saveAdminSiteSettings()">Save</button>
         </div>
       </div>
 
-      <div class="live-section-head">
-        <div>
-          <div class="live-section-title">Agents</div>
-          <div class="live-section-sub">Toggle live/draft and edit tags. Live agents appear on the home page.</div>
-        </div>
-        <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
-          <div class="admin-filter-row">
-            <button class="admin-filter active" data-admin-filter="all" onclick="setAdminFilter('all')">All</button>
-            <button class="admin-filter" data-admin-filter="live" onclick="setAdminFilter('live')">Live</button>
-            <button class="admin-filter" data-admin-filter="draft" onclick="setAdminFilter('draft')">Draft</button>
+      <div id="admin-tab-agents" class="admin-tab-panel hidden">
+        <div class="live-section-head">
+          <div>
+            <div class="live-section-title">Agents</div>
+            <div class="live-section-sub">Toggle live/draft and edit tags. Live agents appear on the home page.</div>
           </div>
-          <button class="explore-btn" onclick="openCreateAgentModal()" style="padding:.45rem 1rem">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
-            New Agent
-          </button>
+          <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+            <div class="admin-filter-row">
+              <button class="admin-filter active" data-admin-filter="all" onclick="setAdminFilter('all')">All</button>
+              <button class="admin-filter" data-admin-filter="live" onclick="setAdminFilter('live')">Live</button>
+              <button class="admin-filter" data-admin-filter="draft" onclick="setAdminFilter('draft')">Draft</button>
+            </div>
+            <button class="explore-btn" onclick="openCreateAgentModal()" style="padding:.45rem 1rem">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+              New Agent
+            </button>
+          </div>
+        </div>
+        <div class="admin-table" id="admin-table"></div>
+      </div>
+
+      <div id="admin-tab-providers" class="admin-tab-panel hidden">
+        <div class="live-section-head">
+          <div>
+            <div class="live-section-title">Providers</div>
+            <div class="live-section-sub">LLM providers used by agents. Seeded from PROVIDER_N_* in .env on first run, then editable here.</div>
+          </div>
+          <div style="display:flex;gap:.6rem;align-items:center">
+            <button class="explore-btn" onclick="openCreateProviderModal()" style="padding:.45rem 1rem">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+              New Provider
+            </button>
+          </div>
+        </div>
+        <div class="admin-table" id="admin-providers-table"></div>
+      </div>
+
+      <div id="admin-tab-observability" class="admin-tab-panel hidden">
+        <div class="admin-settings-card">
+          <h3>Langfuse</h3>
+          <div class="sub">LLM tracing. Seeded from LANGFUSE_* in .env on first run, then editable here. Leave the keys blank to disable tracing.</div>
+          <div class="admin-settings-grid">
+            <div class="agent-form-row">
+              <label>Public Key</label>
+              <input id="admin-set-lf-pk" type="text" placeholder="pk-lf-…" autocomplete="off">
+            </div>
+            <div class="agent-form-row">
+              <label>Secret Key</label>
+              <input id="admin-set-lf-sk" type="password" placeholder="sk-lf-…" autocomplete="off">
+            </div>
+            <div class="agent-form-row full">
+              <label>Base URL</label>
+              <input id="admin-set-lf-url" type="text" placeholder="https://cloud.langfuse.com">
+            </div>
+          </div>
+          <div class="agent-form-actions" style="margin-top:.6rem">
+            <span class="admin-save-status" id="admin-lf-status">Saved ✓</span>
+            <button class="explore-btn" onclick="saveLangfuseSettings()">Save</button>
+          </div>
         </div>
       </div>
-      <div class="admin-table" id="admin-table"></div>
     </div>
   </div>
 
@@ -690,6 +750,7 @@ body.light .agent-form-row .hint{color:#64748b}
 <div id="deploy-modal-root"></div>
 <div id="agent-modal-root"></div>
 <div id="agent-edit-modal-root"></div>
+<div id="provider-modal-root"></div>
 
 <footer>ClickHouse Agentic AI Harness &nbsp;·&nbsp; By <a href="https://benjaminwootton.com" target="_blank">@benjaminwootton</a></footer>
 
@@ -1108,11 +1169,18 @@ function modelShortName(modelId) {
   return (m && m.provider) || (m && m.label) || modelId || 'LLM';
 }
 
+function switchSessionModel(modelId) {
+  if (!currentAgent) return;
+  currentAgent.model = modelId;
+  const headerEl = document.getElementById('chat-header-model');
+  if (headerEl) headerEl.textContent = modelLabelFor(modelId);
+}
+
 function renderAgentDetail(s) {
-  currentAgent = s;
-  const agentName = s.name;
-  const modelLabel = modelLabelFor(s.model);
-  const modelShort = modelShortName(s.model);
+  currentAgent = { ...s };
+  const agentName = currentAgent.name;
+  const modelLabel = modelLabelFor(currentAgent.model);
+  const modelShort = modelShortName(currentAgent.model);
   const exposeInternals = s.exposeInternals !== false;
   const layoutClasses = `detail-layout${exposeInternals ? '' : ' internals-hidden'}`;
   const hasSchema = !!(s.schema && s.schema.trim());
@@ -1137,7 +1205,7 @@ function renderAgentDetail(s) {
           </div>
           <div class="chat-header-text">
             <h3>${agentName}</h3>
-            <p>Powered by ClickHouse · ${escHtml(modelLabel)}</p>
+            <p>Powered by ClickHouse · <span id="chat-header-model">${escHtml(modelLabel)}</span></p>
           </div>
           <div class="chat-status"><div class="chat-status-dot"></div>Ready</div>
         </div>
@@ -1157,7 +1225,13 @@ function renderAgentDetail(s) {
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2L2 6.5l5 2 2 5L14 2z"/></svg>
             </button>
           </div>
-          <div class="chat-hint">Powered by ${escHtml(modelLabel)} · Press Enter to send</div>
+          <div class="chat-hint">
+            Powered by
+            <select class="chat-model-select" id="chat-model-select" onchange="switchSessionModel(this.value)" title="Switch model for this session only (not saved)">
+              ${(availableModels || []).map(m => `<option value="${escAttr(m.id)}"${m.id === currentAgent.model ? ' selected' : ''}>${escHtml(m.label)}</option>`).join('')}
+            </select>
+            · Press Enter to send
+          </div>
         </div>
       </div>
     </div>
@@ -1906,11 +1980,200 @@ async function saveAgentEdits(id) {
   }
 }
 
+let adminTab = 'home';
+let providers = [];
+
+function setAdminTab(tab) {
+  adminTab = tab;
+  document.querySelectorAll('[data-admin-tab]').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-admin-tab') === tab);
+  });
+  document.getElementById('admin-tab-home').classList.toggle('hidden', tab !== 'home');
+  document.getElementById('admin-tab-agents').classList.toggle('hidden', tab !== 'agents');
+  document.getElementById('admin-tab-providers').classList.toggle('hidden', tab !== 'providers');
+  document.getElementById('admin-tab-observability').classList.toggle('hidden', tab !== 'observability');
+  if (tab === 'providers') loadProvidersAndRender();
+  if (tab === 'observability') fillLangfuseForm();
+}
+
+function fillLangfuseForm() {
+  document.getElementById('admin-set-lf-pk').value  = siteSettings.langfusePublicKey || '';
+  document.getElementById('admin-set-lf-sk').value  = siteSettings.langfuseSecretKey || '';
+  document.getElementById('admin-set-lf-url').value = siteSettings.langfuseBaseUrl || 'https://cloud.langfuse.com';
+}
+
+async function saveLangfuseSettings() {
+  const langfusePublicKey = document.getElementById('admin-set-lf-pk').value.trim();
+  const langfuseSecretKey = document.getElementById('admin-set-lf-sk').value.trim();
+  const langfuseBaseUrl   = document.getElementById('admin-set-lf-url').value.trim();
+  const statusEl = document.getElementById('admin-lf-status');
+  statusEl.classList.remove('show');
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ langfusePublicKey, langfuseSecretKey, langfuseBaseUrl })
+    });
+    const data = await res.json();
+    if (data.settings) siteSettings = { ...siteSettings, ...data.settings };
+    statusEl.textContent = 'Saved ✓';
+    statusEl.classList.add('show');
+    setTimeout(() => statusEl.classList.remove('show'), 2000);
+  } catch (e) {
+    statusEl.textContent = 'Failed';
+    statusEl.classList.add('show');
+  }
+}
+
+async function loadProvidersAndRender() {
+  try {
+    const res = await fetch('/api/providers');
+    const data = await res.json();
+    providers = data.providers || [];
+  } catch (e) {
+    providers = [];
+  }
+  renderProvidersTable();
+}
+
+function renderProvidersTable() {
+  const el = document.getElementById('admin-providers-table');
+  if (!el) return;
+  if (!providers.length) {
+    el.innerHTML = '<div class="admin-empty">No providers yet. Click “New Provider” to add one.</div>';
+    return;
+  }
+  el.innerHTML = providers.map(p => `
+    <div class="admin-row admin-provider-row">
+      <div class="admin-row-name">
+        <div class="admin-row-title">${escHtml(p.name)}</div>
+        <div class="admin-row-sub">${escHtml(p.id)}</div>
+      </div>
+      <div class="admin-row-mono" title="${escAttr(p.model)}">${escHtml(p.model)}</div>
+      <div class="admin-row-mono" title="${escAttr(p.baseUrl)}">${escHtml(p.baseUrl)}</div>
+      <div class="admin-row-actions">
+        <button class="admin-edit-btn" onclick="openProviderModal('${escAttr(p.id)}')">Edit</button>
+        <button class="admin-edit-btn" onclick="deleteProvider('${escAttr(p.id)}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+function openCreateProviderModal() {
+  renderProviderModal(null);
+}
+
+function openProviderModal(id) {
+  const p = providers.find(x => x.id === id);
+  if (!p) return;
+  renderProviderModal(p);
+}
+
+function renderProviderModal(existing) {
+  const isNew = !existing;
+  const p = existing || { id: '', name: '', apiKey: '', baseUrl: '', model: '' };
+  const root = document.getElementById('provider-modal-root');
+  root.innerHTML = `
+    <div class="deploy-modal" id="provider-modal" onclick="handleProviderBackdrop(event)">
+      <div class="deploy-modal-card" style="width:min(680px,100%);max-height:85vh;overflow-y:auto">
+        <div class="deploy-modal-head">
+          <div>
+            <div class="deploy-modal-eyebrow">${isNew ? 'New Provider' : 'Edit Provider'}</div>
+            <div class="deploy-modal-title">${escHtml(isNew ? 'Add LLM Provider' : p.name)}</div>
+          </div>
+          <button class="deploy-modal-close" onclick="closeProviderModal()" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 2l10 10M12 2L2 12"/></svg>
+          </button>
+        </div>
+        <div class="agent-form-row">
+          <label>Name</label>
+          <input id="prov-name" type="text" value="${escAttr(p.name)}" placeholder="e.g. Fireworks">
+          <div class="hint">Display name shown in the model picker.</div>
+        </div>
+        <div class="agent-form-row">
+          <label>Base URL</label>
+          <input id="prov-base-url" type="text" value="${escAttr(p.baseUrl)}" placeholder="https://api.example.com/v1">
+          <div class="hint">OpenAI-compatible chat completions endpoint.</div>
+        </div>
+        <div class="agent-form-row">
+          <label>Model</label>
+          <input id="prov-model" type="text" value="${escAttr(p.model)}" placeholder="e.g. accounts/fireworks/models/…">
+        </div>
+        <div class="agent-form-row">
+          <label>API Key</label>
+          <input id="prov-api-key" type="text" value="${escAttr(p.apiKey)}" placeholder="Leave blank for providers that don't require auth">
+        </div>
+        <div class="agent-form-error" id="prov-error"></div>
+        <div class="agent-form-actions">
+          <button class="deploy-secondary" onclick="closeProviderModal()">Cancel</button>
+          <button class="explore-btn" onclick="saveProvider(${isNew ? 'null' : `'${escAttr(p.id)}'`})">${isNew ? 'Create' : 'Save'}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function handleProviderBackdrop(ev) {
+  if (ev.target && ev.target.id === 'provider-modal') closeProviderModal();
+}
+
+function closeProviderModal() {
+  const root = document.getElementById('provider-modal-root');
+  if (root) root.innerHTML = '';
+}
+
+async function saveProvider(id) {
+  const name = document.getElementById('prov-name').value.trim();
+  const baseUrl = document.getElementById('prov-base-url').value.trim();
+  const model = document.getElementById('prov-model').value.trim();
+  const apiKey = document.getElementById('prov-api-key').value;
+  const errEl = document.getElementById('prov-error');
+  errEl.textContent = '';
+  if (!name || !baseUrl || !model) {
+    errEl.textContent = 'Name, Base URL, and Model are required.';
+    return;
+  }
+  try {
+    const url = id ? `/api/providers/${encodeURIComponent(id)}` : '/api/providers';
+    const method = id ? 'PATCH' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, baseUrl, model, apiKey })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    closeProviderModal();
+    await loadProvidersAndRender();
+    await loadCustomAgentsConfig();
+  } catch (e) {
+    errEl.textContent = e.message || 'Failed to save';
+  }
+}
+
+async function deleteProvider(id) {
+  const p = providers.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Delete provider "${p.name}"? Agents that reference it will fall back to the first available provider.`)) return;
+  try {
+    const res = await fetch(`/api/providers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    await loadProvidersAndRender();
+    await loadCustomAgentsConfig();
+  } catch (e) {
+    alert(e.message || 'Failed to delete');
+  }
+}
+
 function renderAdminView() {
   document.getElementById('admin-set-eyebrow').value = siteSettings.homeEyebrow || '';
   document.getElementById('admin-set-title').value = siteSettings.homeTitle || '';
   document.getElementById('admin-set-description').value = siteSettings.homeDescription || '';
   renderAdminTable();
+  if (adminTab === 'providers') loadProvidersAndRender();
 }
 
 function navigateAdmin(ev) {

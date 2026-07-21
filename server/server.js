@@ -47,6 +47,14 @@ db.exec(`
     questions        TEXT,
     expose_internals INTEGER
   );
+  CREATE TABLE IF NOT EXISTS providers (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    api_key    TEXT NOT NULL DEFAULT '',
+    base_url   TEXT NOT NULL,
+    model      TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
 `);
 ensureColumn('scenario_overrides', 'tags',             'TEXT');
 ensureColumn('scenario_overrides', 'system_prompt',    'TEXT');
@@ -80,39 +88,58 @@ function normalizeTags(input) {
   return [];
 }
 
-function loadProviders() {
-  const providers = [];
-  for (let i = 1; i <= 5; i++) {
-    const name    = (process.env[`PROVIDER_${i}_NAME`]     || '').trim();
-    const apiKey  = (process.env[`PROVIDER_${i}_API_KEY`]  || '').trim();
-    const baseUrl = (process.env[`PROVIDER_${i}_BASE_URL`] || '').trim();
-    const model   = (process.env[`PROVIDER_${i}_MODEL`]    || '').trim();
-    if (!name || !baseUrl || !model) continue;
-    providers.push({
-      id: `provider-${i}`,
-      slot: i,
-      name,
-      apiKey: apiKey || 'not-required',
-      baseUrl,
-      model,
-      client: new OpenAI({ apiKey: apiKey || 'not-required', baseURL: baseUrl })
-    });
+// Seed providers from .env if the table is empty
+{
+  const count = db.prepare('SELECT COUNT(*) AS c FROM providers').get().c;
+  if (count === 0) {
+    const insert = db.prepare('INSERT INTO providers (id, name, api_key, base_url, model, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+    const now = Date.now();
+    let seeded = 0;
+    for (let i = 1; i <= 5; i++) {
+      const name    = (process.env[`PROVIDER_${i}_NAME`]     || '').trim();
+      const apiKey  = (process.env[`PROVIDER_${i}_API_KEY`]  || '').trim();
+      const baseUrl = (process.env[`PROVIDER_${i}_BASE_URL`] || '').trim();
+      const model   = (process.env[`PROVIDER_${i}_MODEL`]    || '').trim();
+      if (!name || !baseUrl || !model) continue;
+      insert.run(`provider-${i}`, name, apiKey, baseUrl, model, now + i);
+      seeded++;
+    }
+    if (seeded) console.log(`[seed] copied ${seeded} providers from .env into sqlite`);
   }
-  return providers;
 }
-const PROVIDERS = loadProviders();
-const PROVIDERS_BY_ID = Object.fromEntries(PROVIDERS.map(p => [p.id, p]));
-const PROVIDERS_BY_MODEL = Object.fromEntries(PROVIDERS.map(p => [p.model, p]));
+
+let PROVIDERS = [];
+let PROVIDERS_BY_ID = {};
+let PROVIDERS_BY_MODEL = {};
+
+function refreshProviders() {
+  const rows = db.prepare('SELECT id, name, api_key, base_url, model FROM providers ORDER BY created_at ASC').all();
+  PROVIDERS = rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    apiKey: r.api_key || 'not-required',
+    baseUrl: r.base_url,
+    model: r.model,
+    client: new OpenAI({ apiKey: r.api_key || 'not-required', baseURL: r.base_url })
+  }));
+  PROVIDERS_BY_ID = Object.fromEntries(PROVIDERS.map(p => [p.id, p]));
+  PROVIDERS_BY_MODEL = Object.fromEntries(PROVIDERS.map(p => [p.model, p]));
+}
+refreshProviders();
+
 function resolveProvider(requested) {
   return PROVIDERS_BY_ID[requested] || PROVIDERS_BY_MODEL[requested] || PROVIDERS[0];
 }
+function getDefaultModelId() {
+  return PROVIDERS[0]?.id || null;
+}
 if (PROVIDERS.length === 0) {
-  throw new Error('No LLM providers configured. Set at least PROVIDER_1_NAME, PROVIDER_1_BASE_URL, and PROVIDER_1_MODEL in .env.');
+  console.warn('[llm] no providers configured — add at least one via the admin UI or set PROVIDER_1_* in .env before restarting.');
+} else {
+  for (const p of PROVIDERS) {
+    console.log(`[llm] provider id=${p.id} name=${p.name} model=${p.model} baseURL=${p.baseUrl}`);
+  }
 }
-for (const p of PROVIDERS) {
-  console.log(`[llm] provider slot=${p.slot} id=${p.id} name=${p.name} model=${p.model} baseURL=${p.baseUrl}`);
-}
-const DEFAULT_MODEL_ID = PROVIDERS[0].id;
 
 // Seed default ClickHouse instance from .env if empty
 {
@@ -191,12 +218,31 @@ function normalizeTags(input) {
 const SETTING_DEFAULTS = {
   homeTitle: 'AI agents that talk to your data.',
   homeDescription: 'A curated set of analytical agents wired into ClickHouse, ready to answer questions in plain English. Pick one to chat with — or build your own.',
-  homeEyebrow: 'Live Agents · ClickHouse'
+  homeEyebrow: 'Live Agents · ClickHouse',
+  langfusePublicKey: '',
+  langfuseSecretKey: '',
+  langfuseBaseUrl: 'https://cloud.langfuse.com'
 };
 function getAllSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();
   const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
   return { ...SETTING_DEFAULTS, ...map };
+}
+
+// Seed langfuse settings from .env if not yet stored
+{
+  const have = new Set(db.prepare('SELECT key FROM settings').all().map(r => r.key));
+  const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');
+  const envSeeds = [
+    ['langfusePublicKey', process.env.LANGFUSE_PUBLIC_KEY],
+    ['langfuseSecretKey', process.env.LANGFUSE_SECRET_KEY],
+    ['langfuseBaseUrl',   process.env.LANGFUSE_BASE_URL || process.env.LANGFUSE_HOST]
+  ];
+  let seeded = 0;
+  for (const [k, v] of envSeeds) {
+    if (!have.has(k) && v && String(v).trim()) { upsert.run(k, String(v).trim()); seeded++; }
+  }
+  if (seeded) console.log(`[seed] copied ${seeded} langfuse setting(s) from .env into sqlite`);
 }
 
 const CLICKHOUSE_INSTANCES = [
@@ -217,15 +263,22 @@ for (const p of INDUSTRY_PATHS) {
   });
 }
 
-const langfuse = (process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY)
-  ? new Langfuse({
-      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-      secretKey: process.env.LANGFUSE_SECRET_KEY,
-      baseUrl: process.env.LANGFUSE_HOST || 'http://78.47.43.63:3000'
-    })
-  : null;
-if (langfuse) console.log(`[langfuse] enabled host=${process.env.LANGFUSE_HOST || 'http://78.47.43.63:3000'}`);
-else console.log('[langfuse] disabled (set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY to enable)');
+let langfuse = null;
+function refreshLangfuse() {
+  const s = getAllSettings();
+  const pk = (s.langfusePublicKey || '').trim();
+  const sk = (s.langfuseSecretKey || '').trim();
+  const baseUrl = (s.langfuseBaseUrl || '').trim() || 'https://cloud.langfuse.com';
+  if (pk && sk) {
+    langfuse = new Langfuse({ publicKey: pk, secretKey: sk, baseUrl });
+    if (process.env.LANGFUSE_DEBUG === '1') langfuse.debug(true);
+    console.log(`[langfuse] enabled host=${baseUrl}`);
+  } else {
+    langfuse = null;
+    console.log('[langfuse] disabled (set public + secret keys in Site Administration → Observability)');
+  }
+}
+refreshLangfuse();
 
 function clickhouseQuery(sql, database, instanceId) {
   return new Promise((resolve, reject) => {
@@ -406,6 +459,9 @@ app.put('/api/settings', (req, res) => {
   });
   const entries = Object.entries(incoming).filter(([k]) => allowed.includes(k)).map(([k, v]) => [k, String(v ?? '')]);
   tx(entries);
+  if (entries.some(([k]) => k === 'langfusePublicKey' || k === 'langfuseSecretKey' || k === 'langfuseBaseUrl')) {
+    refreshLangfuse();
+  }
   res.json({ settings: getAllSettings() });
 });
 
@@ -422,6 +478,62 @@ app.get('/api/models', (req, res) => {
       model: p.model
     }))
   });
+});
+
+function providerRowToJson(r) {
+  return {
+    id: r.id,
+    name: r.name,
+    apiKey: r.api_key || '',
+    baseUrl: r.base_url,
+    model: r.model,
+    createdAt: r.created_at
+  };
+}
+
+app.get('/api/providers', (req, res) => {
+  const rows = db.prepare('SELECT id, name, api_key, base_url, model, created_at FROM providers ORDER BY created_at ASC').all();
+  res.json({ providers: rows.map(providerRowToJson) });
+});
+
+app.post('/api/providers', (req, res) => {
+  const { name, apiKey, baseUrl, model } = req.body || {};
+  if (!name?.trim() || !baseUrl?.trim() || !model?.trim()) {
+    return res.status(400).json({ error: 'name, baseUrl, and model are required' });
+  }
+  const id = `provider-${crypto.randomUUID().slice(0, 8)}`;
+  const createdAt = Date.now();
+  db.prepare('INSERT INTO providers (id, name, api_key, base_url, model, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, name.trim(), (apiKey || '').trim(), baseUrl.trim(), model.trim(), createdAt);
+  refreshProviders();
+  const row = db.prepare('SELECT id, name, api_key, base_url, model, created_at FROM providers WHERE id = ?').get(id);
+  res.json({ provider: providerRowToJson(row) });
+});
+
+app.patch('/api/providers/:id', (req, res) => {
+  const { name, apiKey, baseUrl, model } = req.body || {};
+  const sets = [];
+  const args = [];
+  if (typeof name === 'string' && name.trim())    { sets.push('name = ?');     args.push(name.trim()); }
+  if (typeof apiKey === 'string')                 { sets.push('api_key = ?');  args.push(apiKey.trim()); }
+  if (typeof baseUrl === 'string' && baseUrl.trim()) { sets.push('base_url = ?'); args.push(baseUrl.trim()); }
+  if (typeof model === 'string' && model.trim()) { sets.push('model = ?');    args.push(model.trim()); }
+  if (!sets.length) return res.status(400).json({ error: 'nothing to update' });
+  args.push(req.params.id);
+  const info = db.prepare(`UPDATE providers SET ${sets.join(', ')} WHERE id = ?`).run(...args);
+  if (!info.changes) return res.status(404).json({ error: 'Provider not found' });
+  refreshProviders();
+  const row = db.prepare('SELECT id, name, api_key, base_url, model, created_at FROM providers WHERE id = ?').get(req.params.id);
+  res.json({ provider: providerRowToJson(row) });
+});
+
+app.delete('/api/providers/:id', (req, res) => {
+  const count = db.prepare('SELECT COUNT(*) AS c FROM providers').get().c;
+  if (count <= 1) return res.status(400).json({ error: 'Cannot delete the last provider — the app needs at least one.' });
+  const info = db.prepare('DELETE FROM providers WHERE id = ?').run(req.params.id);
+  if (!info.changes) return res.status(404).json({ error: 'Provider not found' });
+  refreshProviders();
+  res.json({ deleted: info.changes });
 });
 
 function rowToAgent(r) {
@@ -533,7 +645,10 @@ app.post('/api/chat', async (req, res) => {
 
   const instanceId = customAgent?.instanceId || 'default';
   const dbName = customAgent?.dbName || scenario?.dbName || null;
-  const requestedModel = customAgent?.model || DEFAULT_MODEL_ID;
+  const requestedModel = customAgent?.model || getDefaultModelId();
+  if (!requestedModel || PROVIDERS.length === 0) {
+    return res.status(500).json({ error: 'No LLM providers configured. Add one under Site Administration → Providers.' });
+  }
   const provider = resolveProvider(requestedModel);
   const client = provider.client;
   const targetModel = provider.model;
@@ -597,25 +712,30 @@ app.post('/api/chat', async (req, res) => {
     }
   }) : null;
 
-  const streamLLM = async (messages) => {
+  const streamLLM = async (messages, opts = {}) => {
+    const toolChoice = opts.toolChoice ?? 'auto';
     for (let attempt = 0; attempt < 4; attempt++) {
       const generation = trace ? trace.generation({
         name: `${provider.name}.chat.completions`,
         model: targetModel,
-        modelParameters: { max_tokens: 12000 },
-        input: { messages, tools }
+        modelParameters: { max_tokens: 12000, tool_choice: toolChoice },
+        input: { messages, tools: toolChoice === 'none' ? [] : tools }
       }) : null;
       const tStart = Date.now();
       let tFirstByte = null;
       try {
-        const stream = await client.chat.completions.create({
+        const req = {
           model: targetModel,
           max_tokens: 12000,
           stream: true,
-          tools,
-          tool_choice: 'auto',
+          stream_options: { include_usage: true },
           messages
-        });
+        };
+        if (toolChoice !== 'none') {
+          req.tools = tools;
+          req.tool_choice = toolChoice;
+        }
+        const stream = await client.chat.completions.create(req);
         const tHeaders = Date.now();
         console.log(`[chat] llm headers=${tHeaders - tStart}ms attempt=${attempt} provider=${provider.name} model=${targetModel}`);
 
@@ -704,11 +824,14 @@ app.post('/api/chat', async (req, res) => {
     let queryIndex = 0;
     let lastAssistantText = '';
 
-    for (let i = 0; i < 6; i++) {
+    const MAX_TOOL_ITERATIONS = 25;
+    let hitToolLoopCap = false;
+    for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const { text, toolCalls, finishReason } = await streamLLM(messages);
       lastAssistantText = text;
 
       if (finishReason !== 'tool_calls' || toolCalls.length === 0) break;
+      if (i === MAX_TOOL_ITERATIONS - 1) { hitToolLoopCap = true; break; }
 
       messages.push({
         role: 'assistant',
@@ -754,6 +877,16 @@ app.post('/api/chat', async (req, res) => {
           content
         });
       }));
+    }
+
+    if (!lastAssistantText.trim()) {
+      console.log(`[chat] final response empty (hitToolLoopCap=${hitToolLoopCap}); forcing summary with tool_choice=none`);
+      const summaryPrompt = hitToolLoopCap
+        ? `You have used the maximum number of query attempts (${MAX_TOOL_ITERATIONS}). Summarise the findings from the queries you have already run so far, in a helpful markdown answer for the user. Do not attempt any more queries.`
+        : `Provide a final markdown answer for the user based on the queries you have already run. Do not make any more tool calls.`;
+      const forcedMessages = [...messages, { role: 'user', content: summaryPrompt }];
+      const { text: forcedText } = await streamLLM(forcedMessages, { toolChoice: 'none' });
+      if (forcedText.trim()) lastAssistantText = forcedText;
     }
 
     if (trace) {
