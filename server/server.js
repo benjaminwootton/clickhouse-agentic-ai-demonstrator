@@ -5,10 +5,61 @@ const http = require('http');
 const https = require('https');
 const OpenAI = require('openai');
 const { Langfuse } = require('langfuse');
+const figlet = require('figlet');
+
+// Banner — printed before any startup logging so the output reads top-down
+console.log('\n' + figlet.textSync('Agentic AI', { font: 'Standard' }));
+console.log('ClickHouse Agentic Analytics Platform\n');
+
 const path = require('path');
 const fsSync = require('fs');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
+
+// Fail fast on missing configuration rather than booting with a default that
+// points nowhere. ClickHouse is required; model providers can be added later
+// from the admin UI, so they are not checked here.
+{
+  const envPath = path.join(__dirname, '..', '.env');
+  const envFileExists = fsSync.existsSync(envPath);
+  const chUrl = (process.env.CLICKHOUSE_URL || '').trim();
+  const problems = [];
+
+  if (!chUrl) {
+    problems.push('CLICKHOUSE_URL is not set');
+  } else {
+    let parsed = null;
+    try { parsed = new URL(chUrl); } catch { /* handled below */ }
+    if (!parsed) {
+      problems.push(`CLICKHOUSE_URL is not a valid URL (got "${chUrl}")`);
+    } else if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      problems.push(`CLICKHOUSE_URL must start with http:// or https:// (got "${chUrl}")`);
+    }
+  }
+
+  if (problems.length) {
+    console.error('Cannot start \u2014 ClickHouse is not configured.\n');
+    for (const problem of problems) console.error(`  - ${problem}`);
+    const inContainer = fsSync.existsSync('/.dockerenv');
+    if (inContainer) {
+      // .env is never copied into the image; Compose reads it on the host and
+      // passes the values through, so point at the project directory.
+      console.error('\nCreate a .env file in the project directory on your machine:\n');
+      console.error('  cp .env.example .env\n');
+      console.error('Docker Compose reads it and passes the values into the container.');
+      console.error('The defaults in .env.example target a ClickHouse on localhost:8123.');
+    } else if (!envFileExists) {
+      console.error(`\nNo .env file was found at ${envPath}. Create one with:\n`);
+      console.error('  cp .env.example .env\n');
+      console.error('then set CLICKHOUSE_URL, CLICKHOUSE_USER and CLICKHOUSE_PASSWORD.');
+    } else {
+      console.error('\nSet it in your .env file, for example:\n');
+      console.error('  CLICKHOUSE_URL=http://localhost:8123');
+    }
+    console.error('');
+    process.exit(1);
+  }
+}
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -133,13 +184,6 @@ function resolveProvider(requested) {
 function getDefaultModelId() {
   return PROVIDERS[0]?.id || null;
 }
-if (PROVIDERS.length === 0) {
-  console.warn('[llm] no providers configured — add at least one via the admin UI or set PROVIDER_1_* in .env before restarting.');
-} else {
-  for (const p of PROVIDERS) {
-    console.log(`[llm] provider id=${p.id} name=${p.name} model=${p.model} baseURL=${p.baseUrl}`);
-  }
-}
 
 // Seed default ClickHouse instance from .env if empty
 {
@@ -150,7 +194,7 @@ if (PROVIDERS.length === 0) {
     `).run(
       'default',
       process.env.CLICKHOUSE_LABEL || 'Default',
-      process.env.CLICKHOUSE_URL || 'http://localhost:8123',
+      process.env.CLICKHOUSE_URL,
       process.env.CLICKHOUSE_USER || 'default',
       process.env.CLICKHOUSE_PASSWORD || ''
     );
@@ -249,7 +293,7 @@ const CLICKHOUSE_INSTANCES = [
   {
     id: 'default',
     label: process.env.CLICKHOUSE_LABEL || 'Default (from .env)',
-    url: process.env.CLICKHOUSE_URL || 'https://localhost:8443',
+    url: process.env.CLICKHOUSE_URL,
     user: process.env.CLICKHOUSE_USER || 'default',
     password: process.env.CLICKHOUSE_PASSWORD || ''
   }
@@ -264,7 +308,7 @@ for (const p of INDUSTRY_PATHS) {
 }
 
 let langfuse = null;
-function refreshLangfuse() {
+function refreshLangfuse(opts) {
   const s = getAllSettings();
   const pk = (s.langfusePublicKey || '').trim();
   const sk = (s.langfuseSecretKey || '').trim();
@@ -272,13 +316,13 @@ function refreshLangfuse() {
   if (pk && sk) {
     langfuse = new Langfuse({ publicKey: pk, secretKey: sk, baseUrl });
     if (process.env.LANGFUSE_DEBUG === '1') langfuse.debug(true);
-    console.log(`[langfuse] enabled host=${baseUrl}`);
+    if (!(opts && opts.silent)) console.log(`[langfuse] enabled host=${baseUrl}`);
   } else {
     langfuse = null;
-    console.log('[langfuse] disabled (set public + secret keys in Site Administration → Observability)');
+    if (!(opts && opts.silent)) console.log('[langfuse] disabled (set public + secret keys in Site Administration → Observability)');
   }
 }
-refreshLangfuse();
+refreshLangfuse({ silent: true });
 
 function clickhouseQuery(sql, database, instanceId) {
   return new Promise((resolve, reject) => {
@@ -663,7 +707,7 @@ app.post('/api/chat', async (req, res) => {
   } else if (scenario) {
     baseSystem = `You are an AI analyst for the "${scenario.title}" scenario (${scenario.sectorLabel}). ${scenario.description}\n\nDatabase schema:\n${scenario.schema}`;
   } else {
-    baseSystem = 'You are an AI agent assistant for a ClickHouse Agentic AI demonstrator covering financial services, iGaming, construction, and healthcare scenarios.';
+    baseSystem = 'You are an AI agent assistant for a ClickHouse agentic analytics platform covering financial services, iGaming, construction, and healthcare scenarios.';
   }
 
   const systemPrompt = customAgent
@@ -907,4 +951,47 @@ app.post('/api/chat', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms))
+  ]);
+}
+
+function startup() {
+  // Providers
+  if (PROVIDERS.length === 0) {
+    console.log('Providers: none configured');
+    console.log('  Add one in Site Administration → Providers, or set PROVIDER_1_* in .env\n');
+  } else {
+    console.log(`Providers (${PROVIDERS.length}):`);
+    PROVIDERS.forEach((p, i) => {
+      console.log(`  ${i + 1}. ${p.name} — ${p.model}${i === 0 ? ' (default)' : ''}`);
+    });
+    console.log('');
+  }
+
+  // Agents and observability
+  const agentCount = db.prepare('SELECT COUNT(*) AS c FROM agents').get().c;
+  console.log(`Agents: ${agentCount}`);
+  console.log(`Observability: ${langfuse ? 'Langfuse enabled' : 'disabled'}\n`);
+
+  // Start HTTP server FIRST (non-blocking)
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server listening on port ${PORT}`);
+    console.log(`  URL:  http://localhost:${PORT}\n`);
+  });
+
+  // Test ClickHouse connection in background (non-blocking, 6 second timeout)
+  const inst = instancesById['default'];
+  console.log(`Testing connection to "${inst.label}" (${inst.url})...`);
+  withTimeout(clickhouseQuery('SELECT 1'), 6000)
+    .then(() => console.log('ClickHouse connection successful!\n'))
+    .catch(err => {
+      console.log(`ClickHouse connection failed: ${err.message}`);
+      console.log('The UI still loads — set CLICKHOUSE_* in .env and restart, or configure it in Site Administration.\n');
+    });
+}
+
+startup();

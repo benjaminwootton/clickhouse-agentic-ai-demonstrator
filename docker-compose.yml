@@ -1,3 +1,5 @@
+name: clickhouse-agentic-analytics-platform
+
 services:
   app:
     build: .
@@ -34,4 +36,4 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     tty: true
-    restart: unless-stopped
+    restart: on-failure:3
