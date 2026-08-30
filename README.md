@@ -1,5 +1,3 @@
-# clickhouse-agentic-ai-demonstrator
-
 An agentic AI demonstrator showing how DeepSeek V4 Pro on Fireworks AI can analyse financial services data stored in ClickHouse. The app exposes a chat interface where the model is given a `query_clickhouse` tool, lets it issue SQL against scenario-specific databases, and streams thinking, tool calls, and results back to the browser in real time.
 
 ## Stack
