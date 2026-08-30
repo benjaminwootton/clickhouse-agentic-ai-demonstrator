@@ -256,7 +256,7 @@ const CLICKHOUSE_INSTANCES = [
 ];
 const instancesById = Object.fromEntries(CLICKHOUSE_INSTANCES.map(i => [i.id, i]));
 
-const INDUSTRY_PATHS = ['/', '/fs', '/igaming', '/construction', '/admin'];
+const INDUSTRY_PATHS = ['/', '/fs', '/igaming', '/construction', '/healthcare', '/admin'];
 for (const p of INDUSTRY_PATHS) {
   app.get(p, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'website', 'index.html'));
@@ -663,7 +663,7 @@ app.post('/api/chat', async (req, res) => {
   } else if (scenario) {
     baseSystem = `You are an AI analyst for the "${scenario.title}" scenario (${scenario.sectorLabel}). ${scenario.description}\n\nDatabase schema:\n${scenario.schema}`;
   } else {
-    baseSystem = 'You are an AI agent assistant for a ClickHouse Agentic AI demonstrator covering financial services, iGaming, and construction scenarios.';
+    baseSystem = 'You are an AI agent assistant for a ClickHouse Agentic AI demonstrator covering financial services, iGaming, construction, and healthcare scenarios.';
   }
 
   const systemPrompt = customAgent

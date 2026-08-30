@@ -78,6 +78,7 @@ body.light .industry-switch-item.active{background:#eff6ff;border-color:#2563eb;
 .cm{color:#f59e0b}.rb{color:#10b981}.cb{color:#06b6d4}.pay{color:#f43f5e}.comp{color:#f97316}.wm{color:#22c55e}.am{color:#8b5cf6}.ins{color:#ef4444}.tax{color:#84cc16}.pe{color:#ec4899}.acc{color:#14b8a6}.cry{color:#eab308}.cf{color:#0ea5e9}.val{color:#818cf8}
 .sb{color:#22c55e}.cas{color:#a855f7}.pl{color:#0ea5e9}.rg{color:#ef4444}.af{color:#f59e0b}
 .cp{color:#f59e0b}.qs{color:#06b6d4}.pm{color:#22c55e}.pro{color:#a855f7}.hse{color:#ef4444}
+.ps{color:#14b8a6}
 .card h3{font-size:1.05rem;font-weight:600;margin-bottom:.6rem;color:#e2e8f0}
 .card p{font-size:.85rem;color:#64748b;line-height:1.65}
 .card-arrow{position:absolute;top:1.2rem;right:1.2rem;color:#334155;font-size:1rem;transition:all .2s}
@@ -727,6 +728,7 @@ body.light .agent-form-row .hint{color:#64748b}
         <a href="/fs" class="industry-switch-item" data-industry="fs" onclick="navigateIndustry(event,'fs')">Financial Services</a>
         <a href="/igaming" class="industry-switch-item" data-industry="igaming" onclick="navigateIndustry(event,'igaming')">iGaming</a>
         <a href="/construction" class="industry-switch-item" data-industry="construction" onclick="navigateIndustry(event,'construction')">Construction</a>
+        <a href="/healthcare" class="industry-switch-item" data-industry="healthcare" onclick="navigateIndustry(event,'healthcare')">Healthcare</a>
       </div>
     </div>
 
@@ -935,7 +937,9 @@ const SECTOR_ORDER = [
   // iGaming
   'sb','cas','pl','rg','af',
   // Construction
-  'cp','qs','pm','pro','hse'
+  'cp','qs','pm','pro','hse',
+  // Healthcare
+  'ps'
 ];
 const SECTOR_NAMES = {
   cm:'Capital Markets', rb:'Retail Banking', cb:'Commercial Banking',
@@ -945,13 +949,15 @@ const SECTOR_NAMES = {
   sb:'Sportsbook & Trading', cas:'Casino & Games', pl:'Player & CRM',
   rg:'Responsible Gambling & Fraud', af:'Affiliates & Marketing',
   cp:'Cost Planning & Estimating', qs:'Quantity Surveying',
-  pm:'Project Controls', pro:'Procurement & Supply', hse:'Safety & Quality'
+  pm:'Project Controls', pro:'Procurement & Supply', hse:'Safety & Quality',
+  ps:'Patient Safety'
 };
 const SECTOR_INDUSTRY = {
   cm:'fs', rb:'fs', cb:'fs', pay:'fs', comp:'fs', wm:'fs', am:'fs',
   ins:'fs', tax:'fs', pe:'fs', acc:'fs', cry:'fs', cf:'fs', val:'fs',
   sb:'igaming', cas:'igaming', pl:'igaming', rg:'igaming', af:'igaming',
-  cp:'construction', qs:'construction', pm:'construction', pro:'construction', hse:'construction'
+  cp:'construction', qs:'construction', pm:'construction', pro:'construction', hse:'construction',
+  ps:'healthcare'
 };
 const INDUSTRY_META = {
   fs: {
@@ -968,10 +974,15 @@ const INDUSTRY_META = {
     slug:'construction',
     title:'ClickHouse In Construction<br><span>Agentic AI Demonstrator</span>',
     desc:'Explore how AI agents analyse and query ClickHouse datasets for cost planners, quantity surveyors, and project teams — covering tender benchmarking, cost-plan accuracy, BOQ rate analysis, variations, earned value, cash flow, materials, subcontractors, safety and defects.'
+  },
+  healthcare: {
+    slug:'healthcare',
+    title:'ClickHouse In Healthcare<br><span>Agentic AI Demonstrator</span>',
+    desc:'Explore how AI agents analyse and query ClickHouse datasets for clinical governance and patient safety teams — covering falls, medication incidents, pressure ulcers, contributory factors, degree of harm, and ward activity — with example schemas, synthetic data, and sample Q&A.'
   }
 };
 let currentIndustry = 'fs';
-let currentMode = 'live'; // 'live' (curated /) or 'catalog' (/fs, /igaming, /construction)
+let currentMode = 'live'; // 'live' (curated /) or 'catalog' (/fs, /igaming, /construction, /healthcare)
 
 function detectModeFromUrl() {
   const p = (location.pathname || '/').toLowerCase();
@@ -979,6 +990,7 @@ function detectModeFromUrl() {
   if (p.startsWith('/admin')) return { mode: 'admin', industry: 'fs' };
   if (p.startsWith('/igaming')) return { mode: 'catalog', industry: 'igaming' };
   if (p.startsWith('/construction')) return { mode: 'catalog', industry: 'construction' };
+  if (p.startsWith('/healthcare')) return { mode: 'catalog', industry: 'healthcare' };
   if (p.startsWith('/fs')) return { mode: 'catalog', industry: 'fs' };
   return { mode: 'live', industry: 'fs' };
 }
